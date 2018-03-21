@@ -19,12 +19,13 @@ package util
 import (
 	"encoding/json"
 	"errors"
-	"github.com/containers/image/docker/tarfile"
-	"github.com/docker/docker/client"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/containers/image/docker/tarfile"
+	"github.com/docker/docker/client"
+	"github.com/sirupsen/logrus"
 )
 
 type TarPrepper struct {
@@ -55,7 +56,7 @@ func (p *TarPrepper) GetFileSystem() (string, error) {
 }
 
 func (p *TarPrepper) GetConfig() (ConfigSchema, error) {
-	tempDir, err := ioutil.TempDir("", ".container-diff")
+	tempDir, err := ioutil.TempDir("", ".snyk-docker-analyzer")
 	if err != nil {
 		return ConfigSchema{}, nil
 	}

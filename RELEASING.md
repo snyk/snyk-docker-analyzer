@@ -1,6 +1,6 @@
-# Releasing container-diff
+# Releasing snyk-docker-analyzer
 
-The github.com/GoogleCloudPlatform/container-diff uses Container Builder triggers to build and release binaries.
+The github.com/GoogleCloudPlatform/snyk-docker-analyzer uses Container Builder triggers to build and release binaries.
 These triggers are setup via the Cloud Console, but the builds they execute live in this repo.
 
 ## Continuous Builds
@@ -8,34 +8,34 @@ These triggers are setup via the Cloud Console, but the builds they execute live
 Every commit to master is built and pushed automatically to a GCS location named via the COMMIT_SHA.
 
 ```shell
-$ gsutil ls gs://container-diff/builds/
-gs://container-diff/builds/b726215b8b978e1d85257af5c2fd0a6fb8e116fd/
+$ gsutil ls gs://snyk-docker-analyzer/builds/
+gs://snyk-docker-analyzer/builds/b726215b8b978e1d85257af5c2fd0a6fb8e116fd/
 
-$ gsutil ls gs://container-diff/builds/b726215b8b978e1d85257af5c2fd0a6fb8e116fd/
-gs://container-diff/builds/b726215b8b978e1d85257af5c2fd0a6fb8e116fd/container-diff-darwin-amd64.sha256
-gs://container-diff/builds/b726215b8b978e1d85257af5c2fd0a6fb8e116fd/container-diff-linux-amd64
-gs://container-diff/builds/b726215b8b978e1d85257af5c2fd0a6fb8e116fd/container-diff-linux-amd64.sha256
-gs://container-diff/builds/b726215b8b978e1d85257af5c2fd0a6fb8e116fd/container-diff-windows-amd64.exe.sha256
+$ gsutil ls gs://snyk-docker-analyzer/builds/b726215b8b978e1d85257af5c2fd0a6fb8e116fd/
+gs://snyk-docker-analyzer/builds/b726215b8b978e1d85257af5c2fd0a6fb8e116fd/snyk-docker-analyzer-darwin-amd64.sha256
+gs://snyk-docker-analyzer/builds/b726215b8b978e1d85257af5c2fd0a6fb8e116fd/snyk-docker-analyzer-linux-amd64
+gs://snyk-docker-analyzer/builds/b726215b8b978e1d85257af5c2fd0a6fb8e116fd/snyk-docker-analyzer-linux-amd64.sha256
+gs://snyk-docker-analyzer/builds/b726215b8b978e1d85257af5c2fd0a6fb8e116fd/snyk-docker-analyzer-windows-amd64.exe.sha256
 ```
 
 The artifacts built and stored are roughly equivalent to the `make cross` target in our Makefile.
 
 The `cloudbuild.yaml` at the project root is used to build these artifdacts.
 
-## Release Builds
+## Release Build
 
 When a new tag is pushed to Github, a second Container Builder pipeline is executed to build and upload release binaries.
 These are stored in another GCS location, in the same bucket.
 These artifacts are named via the git TAG name.
 
 ```shell
-$ gsutil ls gs://container-diff/
-gs://container-diff/builds/
-gs://container-diff/latest/
-gs://container-diff/v0.2.0/
-gs://container-diff/v0.4.0/
-gs://container-diff/v0.4.1/
-gs://container-diff/v0.5.0/
+$ gsutil ls gs://snyk-docker-analyzer/
+gs://snyk-docker-analyzer/builds/
+gs://snyk-docker-analyzer/latest/
+gs://snyk-docker-analyzer/v0.2.0/
+gs://snyk-docker-analyzer/v0.4.0/
+gs://snyk-docker-analyzer/v0.4.1/
+gs://snyk-docker-analyzer/v0.5.0/
 ```
 
 A second, `latest` location is setup as an alias to the latest release.

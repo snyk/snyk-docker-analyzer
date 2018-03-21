@@ -19,8 +19,9 @@ package differs
 import (
 	"fmt"
 
-	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
-	"github.com/GoogleCloudPlatform/container-diff/util"
+	pkgutil "github.com/snyk/snyk-docker-analyzer/pkg/util"
+	"github.com/snyk/snyk-docker-analyzer/util"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -45,6 +46,7 @@ var Analyzers = map[string]Analyzer{
 	"history": HistoryAnalyzer{},
 	"file":    FileAnalyzer{},
 	"apt":     AptAnalyzer{},
+	"apk":     ApkAnalyzer{},
 	"rpm":     RPMAnalyzer{},
 	"pip":     PipAnalyzer{},
 	"node":    NodeAnalyzer{},

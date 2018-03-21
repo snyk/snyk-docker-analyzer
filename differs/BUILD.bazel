@@ -12,7 +12,7 @@ go_library(
         "pip_diff.go",
         "rpm_diff.go",
     ],
-    importpath = "github.com/GoogleCloudPlatform/container-diff/differs",
+    importpath = "github.com/snyk/snyk-docker-analyzer/differs",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/util:go_default_library",
@@ -34,7 +34,7 @@ go_test(
         "rpm_diff_test.go",
     ],
     embed = [":go_default_library"],
-    importpath = "github.com/GoogleCloudPlatform/container-diff/differs",
+    importpath = "github.com/snyk/snyk-docker-analyzer/differs",
     deps = [
         "//pkg/util:go_default_library",
         "//util:go_default_library",

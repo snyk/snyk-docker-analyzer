@@ -21,7 +21,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GoogleCloudPlatform/container-diff/cmd"
+	"github.com/snyk/snyk-docker-analyzer/cmd"
+
 	"github.com/pkg/profile"
 )
 

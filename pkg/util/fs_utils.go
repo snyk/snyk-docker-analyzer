@@ -18,6 +18,9 @@ package util
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -35,6 +38,7 @@ type Directory struct {
 type DirectoryEntry struct {
 	Name string
 	Size int64
+	Sha1 string
 }
 
 func GetSize(path string) int64 {
@@ -51,6 +55,23 @@ func GetSize(path string) int64 {
 		return size
 	}
 	return stat.Size()
+}
+
+//
+func GetSha1(path string) (string, error) {
+	fileHandle, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+
+	shaHandle := sha1.New()
+	if _, err = io.Copy(shaHandle, fileHandle); err != nil {
+		// logrus.Errorf("Failed to copy sha data %s: %s", path, err)
+		return "", err
+	}
+
+	digestStr := fmt.Sprintf("%x", shaHandle.Sum(nil))
+	return digestStr, nil
 }
 
 //GetFileContents returns the contents of a file at the specified path
@@ -120,10 +141,14 @@ func CreateDirectoryEntries(root string, entryNames []string) (entries []Directo
 	for _, name := range entryNames {
 		entryPath := filepath.Join(root, name)
 		size := GetSize(entryPath)
-
+		sha1, err := GetSha1(entryPath)
+		if err != nil {
+			continue
+		}
 		entry := DirectoryEntry{
 			Name: name,
 			Size: size,
+			Sha1: sha1,
 		}
 		entries = append(entries, entry)
 	}

@@ -32,7 +32,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 
-	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
+	pkgutil "github.com/snyk/snyk-docker-analyzer/pkg/util"
 )
 
 const (
@@ -66,7 +66,7 @@ type ContainerDiffRunner struct {
 func (c *ContainerDiffRunner) Run(command ...string) (string, string, error) {
 	path, err := filepath.Abs(c.binaryPath)
 	if err != nil {
-		c.t.Fatalf("Error finding container-diff binary: %s", err)
+		c.t.Fatalf("Error finding snyk-docker-analyzer binary: %s", err)
 	}
 	c.t.Logf("Running command: %s %s", path, command)
 	cmd := exec.Command(path, command...)
@@ -83,7 +83,7 @@ func (c *ContainerDiffRunner) Run(command ...string) (string, string, error) {
 func TestDiffAndAnalysis(t *testing.T) {
 	runner := ContainerDiffRunner{
 		t:          t,
-		binaryPath: "../out/container-diff",
+		binaryPath: "../out/snyk-docker-analyzer",
 	}
 
 	var tests = []struct {

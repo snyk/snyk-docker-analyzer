@@ -19,8 +19,8 @@ package differs
 import (
 	"strings"
 
-	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
-	"github.com/GoogleCloudPlatform/container-diff/util"
+	pkgutil "github.com/snyk/snyk-docker-analyzer/pkg/util"
+	"github.com/snyk/snyk-docker-analyzer/util"
 )
 
 type MultiVersionPackageAnalyzer interface {

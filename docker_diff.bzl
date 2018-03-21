@@ -18,7 +18,7 @@ def _impl(ctx):
   container_diff_loction = ctx.executable._container_diff.short_path
   image_location = ctx.file.image.short_path
   
-  # Shell script to execute container-diff with appropriate flags
+  # Shell script to execute snyk-docker-analyzer with appropriate flags
   content = """\
 #!/bin/bash
 set -e
@@ -38,7 +38,7 @@ set -e
   )
 
 #   Diff a bazel image against an image in production with bazel run
-#   Runs container-diff on the two images and prints the output.
+#   Runs snyk-docker-analyzer on the two images and prints the output.
 #   Args:
 #     name: name of the rule
 #     image: bazel target to an image you have bazel built (must be a tar)
@@ -60,7 +60,7 @@ docker_diff = rule(
             allow_empty = True,
         ),
         "_container_diff": attr.label(
-            default = Label("//:container-diff"),
+            default = Label("//:snyk-docker-analyzer"),
             executable = True,
             cfg = "host",
         ),

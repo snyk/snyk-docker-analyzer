@@ -19,14 +19,15 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/GoogleCloudPlatform/container-diff/version"
+	"github.com/snyk/snyk-docker-analyzer/version"
+
 	"github.com/spf13/cobra"
 )
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version of container-diff",
-	Long:  `Print the version of container-diff.`,
+	Short: "Print the version of snyk-docker-analyzer",
+	Long:  `Print the version of snyk-docker-analyzer.`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(command *cobra.Command, args []string) {
 		fmt.Println(version.GetVersion())

@@ -22,8 +22,8 @@ VERSION ?= v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_BUILD)
 GOOS ?= $(shell go env GOOS)
 GOARCH = amd64
 BUILD_DIR ?= ./out
-ORG := github.com/GoogleCloudPlatform
-PROJECT := container-diff
+ORG := github.com/snyk
+PROJECT := snyk-docker-analyzer
 REPOPATH ?= $(ORG)/$(PROJECT)
 RELEASE_BUCKET ?= $(PROJECT)
 

@@ -29,37 +29,38 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type AptAnalyzer struct {
+type ApkAnalyzer struct {
 }
 
-func (a AptAnalyzer) Name() string {
-	return "AptAnalyzer"
+func (a ApkAnalyzer) Name() string {
+	return "ApkAnalyzer"
 }
 
 // AptDiff compares the packages installed by apt-get.
-func (a AptAnalyzer) Diff(image1, image2 pkgutil.Image) (util.Result, error) {
+func (a ApkAnalyzer) Diff(image1, image2 pkgutil.Image) (util.Result, error) {
 	diff, err := singleVersionDiff(image1, image2, a)
 	return diff, err
 }
 
-func (a AptAnalyzer) Analyze(image pkgutil.Image) (util.Result, error) {
+func (a ApkAnalyzer) Analyze(image pkgutil.Image) (util.Result, error) {
 	analysis, err := singleVersionAnalysis(image, a)
 	return analysis, err
 }
 
-func (a AptAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageInfo, error) {
+func (a ApkAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageInfo, error) {
 	path := image.FSPath
 	packages := make(map[string]util.PackageInfo)
 	if _, err := os.Stat(path); err != nil {
 		// invalid image directory path
 		return packages, err
 	}
-	statusFile := filepath.Join(path, "var/lib/dpkg/status")
+	statusFile := filepath.Join(path, "lib/apk/db/installed")
 	if _, err := os.Stat(statusFile); err != nil {
 		// status file does not exist in this layer
 		return packages, nil
 	}
 	if file, err := os.Open(statusFile); err == nil {
+		// fmt.Printf("reading the apk db file")
 		// make sure it gets closed
 		defer file.Close()
 
@@ -76,16 +77,16 @@ func (a AptAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageIn
 	return packages, nil
 }
 
-func (a AptAnalyzer) parseLine(text string, currPackage string, packages map[string]util.PackageInfo) string {
-	line := strings.Split(text, ": ")
+func parseLine(text string, currPackage string, packages map[string]util.PackageInfo) string {
+	line := strings.Split(text, ":")
 	if len(line) == 2 {
 		key := line[0]
 		value := line[1]
-
+		// fmt.Printf("Key %s. Value %s", key, value)
 		switch key {
-		case "Package":
+		case "P":
 			return value
-		case "Version":
+		case "V":
 			if packages[currPackage].Version != "" {
 				logrus.Warningln("Multiple versions of same package detected.  Diffing such multi-versioning not yet supported.")
 				return currPackage
@@ -99,7 +100,7 @@ func (a AptAnalyzer) parseLine(text string, currPackage string, packages map[str
 			packages[currPackage] = currPackageInfo
 			return currPackage
 
-		case "Installed-Size":
+		case "I":
 			currPackageInfo, ok := packages[currPackage]
 			if !ok {
 				currPackageInfo = util.PackageInfo{}
@@ -111,8 +112,7 @@ func (a AptAnalyzer) parseLine(text string, currPackage string, packages map[str
 				logrus.Errorf("Could not get size for %s: %s", currPackage, err)
 				size = -1
 			}
-			// Installed-Size is in KB, so we convert it to bytes to keep consistent with the tool's size units
-			currPackageInfo.Size = size * 1024
+			currPackageInfo.Size = size
 			packages[currPackage] = currPackageInfo
 			return currPackage
 		default:

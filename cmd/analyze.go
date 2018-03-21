@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GoogleCloudPlatform/container-diff/cmd/util/output"
-	"github.com/GoogleCloudPlatform/container-diff/differs"
-	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
+	"github.com/snyk/snyk-docker-analyzer/cmd/util/output"
+	"github.com/snyk/snyk-docker-analyzer/differs"
+	pkgutil "github.com/snyk/snyk-docker-analyzer/pkg/util"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -48,7 +49,7 @@ var analyzeCmd = &cobra.Command{
 
 func checkAnalyzeArgNum(args []string) error {
 	if len(args) != 1 {
-		return errors.New("'analyze' requires one image as an argument: container-diff analyze [image]")
+		return errors.New("'analyze' requires one image as an argument: snyk-docker-analyzer analyze [image]")
 	}
 	return nil
 }

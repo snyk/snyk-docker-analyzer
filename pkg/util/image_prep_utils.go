@@ -24,7 +24,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/container-diff/cmd/util/output"
+	"github.com/snyk/snyk-docker-analyzer/cmd/util/output"
+
 	"github.com/containers/image/docker"
 	"github.com/containers/image/manifest"
 	"github.com/containers/image/pkg/compression"
@@ -125,7 +126,7 @@ func getImage(p Prepper) (Image, error) {
 
 func getImageFromTar(tarPath string) (string, error) {
 	logrus.Info("Extracting image tar to obtain image file system")
-	tempPath, err := ioutil.TempDir("", ".container-diff")
+	tempPath, err := ioutil.TempDir("", ".snyk-docker-analyzer")
 	if err != nil {
 		return "", err
 	}

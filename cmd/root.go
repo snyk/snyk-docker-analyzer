@@ -20,17 +20,14 @@ import (
 	goflag "flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/container-diff/differs"
-	"github.com/GoogleCloudPlatform/container-diff/pkg/cache"
-	pkgutil "github.com/GoogleCloudPlatform/container-diff/pkg/util"
-	"github.com/GoogleCloudPlatform/container-diff/util"
-	"github.com/containers/image/docker"
+	"github.com/snyk/snyk-docker-analyzer/differs"
+	pkgutil "github.com/snyk/snyk-docker-analyzer/pkg/util"
+	"github.com/snyk/snyk-docker-analyzer/util"
+
 	"github.com/docker/docker/client"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -46,24 +43,13 @@ var format string
 
 type validatefxn func(args []string) error
 
-const (
-	DaemonPrefix = "daemon://"
-	RemotePrefix = "remote://"
-)
-
 var RootCmd = &cobra.Command{
-	Use:   "container-diff",
-	Short: "container-diff is a tool for analyzing and comparing container images",
-	Long: `container-diff is a CLI tool for analyzing and comparing container images.
-
-Images can be specified from either a local Docker daemon, or from a remote registry.
-To specify a local image, prefix the image ID with 'daemon://', e.g. 'daemon://gcr.io/foo/bar'.
-To specify a remote image, prefix the image ID with 'remote://', e.g. 'remote://gcr.io/foo/bar'.
-If no prefix is specified, the local daemon will be checked first.
-
-Tarballs can also be specified by simply providing the path to the .tar, .tar.gz, or .tgz file.`,
+	Use:   "snyk-docker-analyzer",
+	Short: "snyk-docker-analyzer is a tool for analyzing and comparing container images",
+	Long:  "snyk-docker-analyzer is a CLI tool for analyzing and comparing container images.",
 	PersistentPreRun: func(c *cobra.Command, s []string) {
 		ll, err := logrus.ParseLevel(LogLevel)
+
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -83,20 +69,11 @@ func outputResults(resultMap map[string]util.Result) {
 	results := make([]interface{}, len(resultMap))
 	for i, analyzerType := range sortedTypes {
 		result := resultMap[analyzerType]
-		if json {
-			results[i] = result.OutputStruct()
-		} else {
-			err := result.OutputText(analyzerType, format)
-			if err != nil {
-				logrus.Error(err)
-			}
-		}
+		results[i] = result.OutputStruct()
 	}
-	if json {
-		err := util.JSONify(results)
-		if err != nil {
-			logrus.Error(err)
-		}
+	err := util.JSONify(results)
+	if err != nil {
+		logrus.Error(err)
 	}
 }
 
@@ -111,7 +88,7 @@ func validateArgs(args []string, validatefxns ...validatefxn) error {
 
 func checkIfValidAnalyzer(_ []string) error {
 	if len(types) == 0 {
-		types = []string{"apt"}
+		types = []string{"apt", "file", "rpm", "apk"}
 	}
 	for _, name := range types {
 		if _, exists := differs.Analyzers[name]; !exists {
@@ -127,65 +104,27 @@ func getPrepperForImage(image string) (pkgutil.Prepper, error) {
 		return nil, err
 	}
 
-	if pkgutil.IsTar(image) {
-		return &pkgutil.TarPrepper{
-			Source: image,
-			Client: cli,
-		}, nil
+	if !strings.Contains(image, ":") {
+		image = image + ":latest"
 	}
 
-	if strings.HasPrefix(image, DaemonPrefix) {
-		// remove the DaemonPrefix
-		image = strings.Replace(image, DaemonPrefix, "", -1)
-
-		return &pkgutil.DaemonPrepper{
-			Source: image,
-			Client: cli,
-		}, nil
-	}
-
-	// either has remote prefix or has no prefix, in which case we force remote
-	image = strings.Replace(image, RemotePrefix, "", -1)
-	ref, err := docker.ParseReference("//" + image)
-	if err != nil {
-		return nil, err
-	}
-	src, err := ref.NewImageSource(nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if !noCache {
-		cacheDir, err := cacheDir()
-		if err != nil {
-			return nil, err
-		}
-
-		src, err = cache.NewFileCache(cacheDir, ref)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &pkgutil.CloudPrepper{
-		Source:      image,
-		Client:      cli,
-		ImageSource: src,
+	return &pkgutil.DaemonPrepper{
+		Source: image,
+		Client: cli,
 	}, nil
 }
 
-func cacheDir() (string, error) {
-	dir, err := homedir.Dir()
-	if err != nil {
-		return "", err
-	}
-	rootDir := filepath.Join(dir, ".container-diff")
-	return filepath.Join(rootDir, "cache"), nil
-}
+// func cacheDir() (string, error) {
+// 	dir, err := homedir.Dir()
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	rootDir := filepath.Join(dir, ".snyk-docker-analyzer")
+// 	return filepath.Join(rootDir, "cache"), nil
+// }
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&LogLevel, "verbosity", "v", "warning", "This flag controls the verbosity of container-diff.")
-	RootCmd.PersistentFlags().StringVarP(&format, "format", "", "", "Format to output diff in.")
+	RootCmd.PersistentFlags().StringVarP(&LogLevel, "verbosity", "v", "warning", "This flag controls the verbosity of snyk-docker-analyzer.")
 	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 }
 
@@ -216,9 +155,5 @@ func (d *diffTypes) Type() string {
 }
 
 func addSharedFlags(cmd *cobra.Command) {
-	cmd.Flags().BoolVarP(&json, "json", "j", false, "JSON Output defines if the diff should be returned in a human readable format (false) or a JSON (true).")
-	cmd.Flags().VarP(&types, "type", "t", "This flag sets the list of analyzer types to use. Set it repeatedly to use multiple analyzers.")
-	cmd.Flags().BoolVarP(&save, "save", "s", false, "Set this flag to save rather than remove the final image filesystems on exit.")
-	cmd.Flags().BoolVarP(&util.SortSize, "order", "o", false, "Set this flag to sort any file/package results by descending size. Otherwise, they will be sorted by name.")
-	cmd.Flags().BoolVarP(&noCache, "no-cache", "n", false, "Set this to force retrieval of layers on each run.")
+	cmd.Flags().BoolVarP(&save, "save", "s", true, "Set this flag to save rather than remove the final image filesystems on exit.")
 }

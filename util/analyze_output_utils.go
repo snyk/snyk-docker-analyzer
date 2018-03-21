@@ -20,7 +20,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/GoogleCloudPlatform/container-diff/pkg/util"
+	"github.com/snyk/snyk-docker-analyzer/pkg/util"
+
 	"github.com/sirupsen/logrus"
 )
 
