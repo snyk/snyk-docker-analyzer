@@ -45,7 +45,7 @@ $(BUILD_DIR)/$(PROJECT)-%-$(GOARCH): $(GO_FILES) $(BUILD_DIR)
 	GOOS=$* GOARCH=$(GOARCH) CGO_ENABLED=0 go build -tags $(GO_BUILD_TAGS) -ldflags $(GO_LDFLAGS) -o $@ $(BUILD_PACKAGE)
 
 %.sha256: %
-	shasum -a 256 $< &> $@
+	shasum -a 256 $< > $@
 
 %.exe: %
 	mv $< $@
