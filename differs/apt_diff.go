@@ -67,7 +67,7 @@ func (a AptAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageIn
 		scanner := bufio.NewScanner(file)
 		var currPackage string
 		for scanner.Scan() {
-			currPackage = parseLine(scanner.Text(), currPackage, packages)
+			currPackage = a.parseLine(scanner.Text(), currPackage, packages)
 		}
 	} else {
 		return packages, err
