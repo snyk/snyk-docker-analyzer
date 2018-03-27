@@ -88,7 +88,7 @@ func validateArgs(args []string, validatefxns ...validatefxn) error {
 
 func checkIfValidAnalyzer(_ []string) error {
 	if len(types) == 0 {
-		types = []string{"apt", "file", "rpm", "apk"}
+		types = []string{"apt", "rpm", "apk"}
 	}
 	for _, name := range types {
 		if _, exists := differs.Analyzers[name]; !exists {
