@@ -68,7 +68,7 @@ func (a ApkAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageIn
 		scanner := bufio.NewScanner(file)
 		var currPackage string
 		for scanner.Scan() {
-			currPackage = parseLine(scanner.Text(), currPackage, packages)
+			currPackage = a.parseLine(scanner.Text(), currPackage, packages)
 		}
 	} else {
 		return packages, err
@@ -77,7 +77,7 @@ func (a ApkAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageIn
 	return packages, nil
 }
 
-func parseLine(text string, currPackage string, packages map[string]util.PackageInfo) string {
+func (a ApkAnalyzer) parseLine(text string, currPackage string, packages map[string]util.PackageInfo) string {
 	line := strings.Split(text, ":")
 	if len(line) == 2 {
 		key := line[0]
