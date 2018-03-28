@@ -1,4 +1,5 @@
 Package: pac1
+Installed-Size: 123
 info: other stuff
 Version: 1.0
 
@@ -7,5 +8,7 @@ info: more other stuff
 Version: 2.0
 
 Package: pac3
+Installed-Size: 123
+Source: pac_ng
 Version: 3.0
 info: again other stuff
