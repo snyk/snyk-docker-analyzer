@@ -144,7 +144,7 @@ func TestMutableSource_Env(t *testing.T) {
 
 	initialEnvMap["NEW"] = "new"
 
-	m.SetEnv(initialEnvMap)
+	m.SetEnv(initialEnvMap, "snyk-docker-analyzer")
 
 	newEnvMap := m.Env()
 	expectedNewEnvMap := map[string]string{

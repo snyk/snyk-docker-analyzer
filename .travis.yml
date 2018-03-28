@@ -11,9 +11,11 @@ install:
 before_script:
   - ./semantic-release -prerelease -noci -dry 2>&1 | grep "new version:" | awk '{split($0,array,"new version:")} ;{print substr(array[2],2);}' > .version
   - export VERSION=$(cat .version)
+
 script:
  - echo Building $VERSION
- - travis_wait make cross
+ - make test
+ - make cross
 
 after_script:
   - ./semantic-release -prerelease -ghr
