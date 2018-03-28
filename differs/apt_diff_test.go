@@ -65,20 +65,28 @@ func TestParseLine(t *testing.T) {
 			expected:    map[string]util.PackageInfo{"La-Croix": {Version: "Lime extra_lime"}},
 		},
 		{
-			descrip:     "Size line",
+			descrip:     "Size line is ignored (vs original container-diff behaviours)",
 			line:        "Installed-Size: 12",
 			packages:    map[string]util.PackageInfo{},
 			currPackage: "La-Croix",
 			expPackage:  "La-Croix",
-			expected:    map[string]util.PackageInfo{"La-Croix": {Size: 12288}},
+			expected:    map[string]util.PackageInfo{},
 		},
 		{
-			descrip:     "Pre-existing PackageInfo struct",
+			descrip:     "Size line ignored also with pre-existing PackageInfo struct",
 			line:        "Installed-Size: 12",
 			packages:    map[string]util.PackageInfo{"La-Croix": {Version: "Lime"}},
 			currPackage: "La-Croix",
 			expPackage:  "La-Croix",
-			expected:    map[string]util.PackageInfo{"La-Croix": {Version: "Lime", Size: 12288}},
+			expected:    map[string]util.PackageInfo{"La-Croix": {Version: "Lime"}},
+		},
+		{
+			descrip:     "Source overrides Package",
+			line:        "Source: zlib",
+			packages:    map[string]util.PackageInfo{},
+			currPackage: "zlib1g",
+			expPackage:  "zlib",
+			expected:    map[string]util.PackageInfo{},
 		},
 	}
 
@@ -89,7 +97,7 @@ func TestParseLine(t *testing.T) {
 			t.Errorf("Expected current package to be: %s, but got: %s.", test.expPackage, currPackage)
 		}
 		if !reflect.DeepEqual(test.packages, test.expected) {
-			t.Errorf("Expected: %v but got: %v", test.expected, test.packages)
+			t.Errorf("Expected: %#v but got: %#v", test.expected, test.packages)
 		}
 	}
 }
@@ -116,9 +124,9 @@ func TestGetAptPackages(t *testing.T) {
 			descrip: "packages in expected location",
 			path:    "testDirs/packageOne",
 			expected: map[string]util.PackageInfo{
-				"pac1": {Version: "1.0"},
-				"pac2": {Version: "2.0"},
-				"pac3": {Version: "3.0"}},
+				"pac1":   {Version: "1.0"},
+				"pac2":   {Version: "2.0"},
+				"pac_ng": {Version: "3.0"}},
 		},
 	}
 	for _, test := range testCases {
