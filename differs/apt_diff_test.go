@@ -83,7 +83,8 @@ func TestParseLine(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		currPackage := parseLine(test.line, test.currPackage, test.packages)
+		a := AptAnalyzer{}
+		currPackage := a.parseLine(test.line, test.currPackage, test.packages)
 		if currPackage != test.expPackage {
 			t.Errorf("Expected current package to be: %s, but got: %s.", test.expPackage, currPackage)
 		}
