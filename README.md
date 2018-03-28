@@ -1,3 +1,3 @@
 # snyk-docker-analyzer
 
-Based on container-diff
+Forked from https://github.com/GoogleCloudPlatform/container-diff
