@@ -82,7 +82,6 @@ func (a ApkAnalyzer) parseLine(text string, currPackage string, packages map[str
 	if len(line) == 2 {
 		key := line[0]
 		value := line[1]
-		// fmt.Printf("Key %s. Value %s", key, value)
 		switch key {
 		case "P":
 			return value
@@ -91,12 +90,11 @@ func (a ApkAnalyzer) parseLine(text string, currPackage string, packages map[str
 				logrus.Warningln("Multiple versions of same package detected.  Diffing such multi-versioning not yet supported.")
 				return currPackage
 			}
-			modifiedValue := strings.Replace(value, "+", " ", 1)
 			currPackageInfo, ok := packages[currPackage]
 			if !ok {
 				currPackageInfo = util.PackageInfo{}
 			}
-			currPackageInfo.Version = modifiedValue
+			currPackageInfo.Version = value
 			packages[currPackage] = currPackageInfo
 			return currPackage
 
