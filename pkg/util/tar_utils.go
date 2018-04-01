@@ -64,6 +64,9 @@ func unpackTar(tr *tar.Reader, path string, whitelist []string) error {
 			continue
 		}
 		mode := header.FileInfo().Mode()
+		const CHMOD_RW_OWNER_R_ALL = 0644
+		const CHMOD_X_OWNER = 0100
+		mode = (mode & CHMOD_X_OWNER) | CHMOD_RW_OWNER_R_ALL
 		switch header.Typeflag {
 
 		// if its a dir and it doesn't exist create it
