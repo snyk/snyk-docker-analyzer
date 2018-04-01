@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	pkgutil "github.com/snyk/snyk-docker-analyzer/pkg/util"
@@ -95,22 +94,6 @@ func (a ApkAnalyzer) parseLine(text string, currPackage string, packages map[str
 				currPackageInfo = util.PackageInfo{}
 			}
 			currPackageInfo.Version = value
-			packages[currPackage] = currPackageInfo
-			return currPackage
-
-		case "I":
-			currPackageInfo, ok := packages[currPackage]
-			if !ok {
-				currPackageInfo = util.PackageInfo{}
-			}
-			var size int64
-			var err error
-			size, err = strconv.ParseInt(value, 10, 64)
-			if err != nil {
-				logrus.Errorf("Could not get size for %s: %s", currPackage, err)
-				size = -1
-			}
-			currPackageInfo.Size = size
 			packages[currPackage] = currPackageInfo
 			return currPackage
 		default:

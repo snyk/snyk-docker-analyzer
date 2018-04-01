@@ -101,8 +101,7 @@ func TestGetApkPackages(t *testing.T) {
 			path:    "testDirs/packageOne",
 			expected: map[string]util.PackageInfo{
 				"pac1": {Version: "1.0"},
-				"pac2": {Version: "2.0"},
-				"pac3": {Version: "3.0"}},
+				"pac2": {Version: "2.0"}},
 		},
 	}
 	for _, test := range testCases {
