@@ -12,3 +12,9 @@ Installed-Size: 123
 Source: pac_ng
 Version: 3.0
 info: again other stuff
+
+Package: pac4
+Installed-Size: 238
+Source: pac4_ng (2.29.2-1+deb9u1)
+Version: 1:2.29.2-1+deb9u1
+info: again other stuff
