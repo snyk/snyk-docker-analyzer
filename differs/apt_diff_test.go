@@ -62,7 +62,7 @@ func TestParseLine(t *testing.T) {
 			packages:    map[string]util.PackageInfo{},
 			currPackage: "La-Croix",
 			expPackage:  "La-Croix",
-			expected:    map[string]util.PackageInfo{"La-Croix": {Version: "Lime extra_lime"}},
+			expected:    map[string]util.PackageInfo{"La-Croix": {Version: "Lime+extra_lime"}},
 		},
 		{
 			descrip:     "Size line is ignored (vs original container-diff behaviours)",
@@ -124,9 +124,10 @@ func TestGetAptPackages(t *testing.T) {
 			descrip: "packages in expected location",
 			path:    "testDirs/packageOne",
 			expected: map[string]util.PackageInfo{
-				"pac1":   {Version: "1.0"},
-				"pac2":   {Version: "2.0"},
-				"pac_ng": {Version: "3.0"}},
+				"pac1":    {Version: "1.0"},
+				"pac2":    {Version: "2.0"},
+				"pac_ng":  {Version: "3.0"},
+				"pac4_ng": {Version: "1:2.29.2-1+deb9u1"}},
 		},
 	}
 	for _, test := range testCases {
