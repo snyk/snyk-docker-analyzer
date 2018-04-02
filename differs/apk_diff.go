@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	pkgutil "github.com/snyk/snyk-docker-analyzer/pkg/util"
@@ -82,7 +81,6 @@ func (a ApkAnalyzer) parseLine(text string, currPackage string, packages map[str
 	if len(line) == 2 {
 		key := line[0]
 		value := line[1]
-		// fmt.Printf("Key %s. Value %s", key, value)
 		switch key {
 		case "P":
 			return value
@@ -91,28 +89,11 @@ func (a ApkAnalyzer) parseLine(text string, currPackage string, packages map[str
 				logrus.Warningln("Multiple versions of same package detected.  Diffing such multi-versioning not yet supported.")
 				return currPackage
 			}
-			modifiedValue := strings.Replace(value, "+", " ", 1)
 			currPackageInfo, ok := packages[currPackage]
 			if !ok {
 				currPackageInfo = util.PackageInfo{}
 			}
-			currPackageInfo.Version = modifiedValue
-			packages[currPackage] = currPackageInfo
-			return currPackage
-
-		case "I":
-			currPackageInfo, ok := packages[currPackage]
-			if !ok {
-				currPackageInfo = util.PackageInfo{}
-			}
-			var size int64
-			var err error
-			size, err = strconv.ParseInt(value, 10, 64)
-			if err != nil {
-				logrus.Errorf("Could not get size for %s: %s", currPackage, err)
-				size = -1
-			}
-			currPackageInfo.Size = size
+			currPackageInfo.Version = value
 			packages[currPackage] = currPackageInfo
 			return currPackage
 		default:

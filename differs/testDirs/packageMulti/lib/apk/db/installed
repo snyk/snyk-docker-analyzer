@@ -1,0 +1,12 @@
+P:pac1
+V:1.0
+Info:other stuff
+
+P:pac2
+V:2.0
+A:x86_64
+S:357083
+I:581632
+T:the musl c library (libc) implementation
+U:http://www.musl-libc.org/
+L:MIT
