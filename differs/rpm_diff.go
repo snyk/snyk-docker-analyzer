@@ -155,7 +155,7 @@ func rpmDataFromContainer(image pkgutil.Image) (map[string]util.PackageInfo, err
 	}
 
 	contConf := godocker.Config{
-		Cmd:   []string{"rpm", "--nodigest", "--nosignature", "-qa", "--qf", "%{NAME}\t%{VERSION}\t%{SIZE}\n"},
+		Cmd:   []string{"rpm", "--nodigest", "--nosignature", "-qa", "--qf", "%{NAME}\t%|EPOCH?{%{EPOCH}:}|%{VERSION}-%{RELEASE}\t%{SIZE}\n"},
 		Image: imageName,
 	}
 
