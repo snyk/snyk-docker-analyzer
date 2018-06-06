@@ -155,5 +155,5 @@ func (d *diffTypes) Type() string {
 }
 
 func addSharedFlags(cmd *cobra.Command) {
-	cmd.Flags().BoolVarP(&save, "save", "s", true, "Set this flag to save rather than remove the final image filesystems on exit.")
+	cmd.Flags().BoolVarP(&save, "save", "s", false, "Set this flag to save rather than remove the final image filesystems on exit.")
 }
