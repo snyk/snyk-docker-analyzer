@@ -32,7 +32,7 @@ import (
 var analyzeCmd = &cobra.Command{
 	Use:   "analyze",
 	Short: "Analyzes an image: [image]",
-	Long:  `Analyzes an image using the specifed analyzers as indicated via flags (see documentation for available ones).`,
+	Long:  `Analyzes an image using the specified analyzers as indicated via flags (see documentation for available ones).`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if err := validateArgs(args, checkAnalyzeArgNum, checkIfValidAnalyzer); err != nil {
 			return err
@@ -80,6 +80,12 @@ func analyzeImage(imageName string, analyzerArgs []string) error {
 		return fmt.Errorf("Error processing image: %s", err)
 	}
 
+	osRelease, err := pkgutil.DetectOSRelease(image.FSPath)
+	if err != nil {
+		return err
+	}
+	output.PrintToStdErr("OS release detected: %s", osRelease)
+
 	req := differs.SingleRequest{
 		Image:        image,
 		AnalyzeTypes: analyzeTypes}
@@ -89,7 +95,7 @@ func analyzeImage(imageName string, analyzerArgs []string) error {
 	}
 
 	output.PrintToStdErr("Retrieving analyses")
-	outputResults(analyses)
+	outputResults(analyses, osRelease)
 
 	if save {
 		logrus.Infof("Image was saved at %s", image.FSPath)
