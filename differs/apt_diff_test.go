@@ -65,6 +65,14 @@ func TestParseLine(t *testing.T) {
 			expected:    map[string]util.PackageInfo{"La-Croix": {Version: "Lime+extra_lime"}},
 		},
 		{
+			descrip:     "Source line",
+			line:        "Source: libz1",
+			packages:    map[string]util.PackageInfo{},
+			currPackage: "zlib1g",
+			expPackage:  "zlib1g",
+			expected:    map[string]util.PackageInfo{"zlib1g": {Source: "libz1"}},
+		},
+		{
 			descrip:     "Size line is ignored (vs original container-diff behaviours)",
 			line:        "Installed-Size: 12",
 			packages:    map[string]util.PackageInfo{},
@@ -79,14 +87,6 @@ func TestParseLine(t *testing.T) {
 			currPackage: "La-Croix",
 			expPackage:  "La-Croix",
 			expected:    map[string]util.PackageInfo{"La-Croix": {Version: "Lime"}},
-		},
-		{
-			descrip:     "Source overrides Package",
-			line:        "Source: zlib",
-			packages:    map[string]util.PackageInfo{},
-			currPackage: "zlib1g",
-			expPackage:  "zlib",
-			expected:    map[string]util.PackageInfo{},
 		},
 	}
 
@@ -124,10 +124,10 @@ func TestGetAptPackages(t *testing.T) {
 			descrip: "packages in expected location",
 			path:    "testDirs/packageOne",
 			expected: map[string]util.PackageInfo{
-				"pac1":    {Version: "1.0"},
-				"pac2":    {Version: "2.0"},
-				"pac_ng":  {Version: "3.0"},
-				"pac4_ng": {Version: "1:2.29.2-1+deb9u1"}},
+				"pac1": {Version: "1.0"},
+				"pac2": {Version: "2.0"},
+				"pac3": {Version: "3.0", Source: "pac_ng"},
+				"pac4": {Version: "1:2.29.2-1+deb9u1", Source: "pac4_ng"}},
 		},
 	}
 	for _, test := range testCases {

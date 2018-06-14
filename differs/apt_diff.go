@@ -85,7 +85,14 @@ func (a AptAnalyzer) parseLine(text string, currPackage string, packages map[str
 		case "Package":
 			return value
 		case "Source":
-			return strings.Fields(value)[0]
+			source := strings.Fields(value)[0]
+			currPackageInfo, ok := packages[currPackage]
+			if !ok {
+				currPackageInfo = util.PackageInfo{}
+			}
+			currPackageInfo.Source = source
+			packages[currPackage] = currPackageInfo
+			return currPackage
 		case "Version":
 			if packages[currPackage].Version != "" {
 				logrus.Warningln("Multiple versions of same package detected.  Diffing such multi-versioning not yet supported.")

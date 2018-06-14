@@ -56,6 +56,7 @@ type Info struct {
 // PackageInfo stores the specific metadata about a package.
 type PackageInfo struct {
 	Version string
+	Source  string
 	Size    int64
 }
 

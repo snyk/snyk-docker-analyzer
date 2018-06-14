@@ -139,6 +139,7 @@ func (r SingleVersionPackageAnalyzeResult) OutputText(diffType string, format st
 
 type PackageOutput struct {
 	Name    string
+	Source  string
 	Path    string `json:",omitempty"`
 	Version string
 	Size    int64
@@ -147,7 +148,7 @@ type PackageOutput struct {
 func getSingleVersionPackageOutput(packageMap map[string]PackageInfo) []PackageOutput {
 	packages := []PackageOutput{}
 	for name, info := range packageMap {
-		packages = append(packages, PackageOutput{Name: name, Version: info.Version, Size: info.Size})
+		packages = append(packages, PackageOutput{Name: name, Source: info.Source, Version: info.Version, Size: info.Size})
 	}
 
 	if SortSize {
