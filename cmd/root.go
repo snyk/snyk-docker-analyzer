@@ -58,7 +58,7 @@ var RootCmd = &cobra.Command{
 	},
 }
 
-func outputResults(resultMap map[string]util.Result) {
+func outputResults(resultMap map[string]util.Result, osRelease pkgutil.OSRelease) {
 	// Outputs diff/analysis results in alphabetical order by analyzer name
 	sortedTypes := []string{}
 	for analyzerType := range resultMap {
@@ -71,7 +71,11 @@ func outputResults(resultMap map[string]util.Result) {
 		result := resultMap[analyzerType]
 		results[i] = result.OutputStruct()
 	}
-	err := util.JSONify(results)
+	output := map[string]interface{}{
+		"osRelease": osRelease,
+		"results":   results,
+	}
+	err := util.JSONify(output)
 	if err != nil {
 		logrus.Error(err)
 	}
