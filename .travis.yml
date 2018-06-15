@@ -7,6 +7,7 @@ go_import_path: github.com/snyk/snyk-docker-analyzer
 install:
   - curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
   - go get github.com/tcnksm/ghr
+  - npm i -g snyk
 
 before_script:
   - ./semantic-release -prerelease -noci -dry 2>&1 | grep "new version:" | awk '{split($0,array,"new version:")} ;{print substr(array[2],2);}' > .version
@@ -15,6 +16,7 @@ before_script:
 script:
  - echo Building $VERSION
  - make test
+ - snyk test
  - make cross
 
 after_script:
