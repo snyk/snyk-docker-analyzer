@@ -96,7 +96,7 @@ func (a AptAnalyzer) parseLine(text string, currPackage string, packages map[str
 		case "Version":
 			if packages[currPackage].Version != "" {
 				logrus.Warningln("Multiple versions of same package detected.  Diffing such multi-versioning not yet supported.")
-				return currPackage
+				break
 			}
 			currPackageInfo, ok := packages[currPackage]
 			if !ok {
@@ -104,10 +104,28 @@ func (a AptAnalyzer) parseLine(text string, currPackage string, packages map[str
 			}
 			currPackageInfo.Version = value
 			packages[currPackage] = currPackageInfo
-			return currPackage
-		default:
-			return currPackage
+			break
+		case "Depends", "Pre-Depends":
+			currPackageInfo, ok := packages[currPackage]
+			if !ok {
+				currPackageInfo = util.PackageInfo{}
+			}
+
+			if currPackageInfo.Deps == nil {
+				currPackageInfo.Deps = map[string]interface{}{}
+			}
+
+			for _, depElem := range strings.Split(value, ",") {
+				for _, dep := range strings.Split(depElem, "|") {
+					name := strings.Fields(dep)[0]
+					currPackageInfo.Deps[name] = nil
+				}
+			}
+
+			packages[currPackage] = currPackageInfo
+			break
 		}
 	}
+
 	return currPackage
 }

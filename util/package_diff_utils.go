@@ -57,6 +57,7 @@ type Info struct {
 type PackageInfo struct {
 	Version string
 	Source  string
+	Deps    map[string]interface{}
 	Size    int64
 }
 

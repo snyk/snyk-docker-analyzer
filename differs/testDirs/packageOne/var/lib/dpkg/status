@@ -11,6 +11,8 @@ Package: pac3
 Installed-Size: 123
 Source: pac_ng
 Version: 3.0
+Depends: pac1 (>= 0.1), libc6 | libc
+Pre-Depends: libc, debconf
 info: again other stuff
 
 Package: pac4

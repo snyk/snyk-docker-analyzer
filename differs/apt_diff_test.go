@@ -88,6 +88,58 @@ func TestParseLine(t *testing.T) {
 			expPackage:  "La-Croix",
 			expected:    map[string]util.PackageInfo{"La-Croix": {Version: "Lime"}},
 		},
+		{
+			descrip:     "Depends line one value",
+			line:        "Depends: libc6",
+			packages:    map[string]util.PackageInfo{"make": {Version: "123"}},
+			currPackage: "make",
+			expPackage:  "make",
+			expected:    map[string]util.PackageInfo{"make": {Version: "123", Deps: map[string]interface{}{"libc6": nil}}},
+		},
+		{
+			descrip:     "Depends line several values",
+			line:        "Depends: libc6",
+			packages:    map[string]util.PackageInfo{"make": {Version: "123"}},
+			currPackage: "make",
+			expPackage:  "make",
+			expected: map[string]util.PackageInfo{"make": {Version: "123", Deps: map[string]interface{}{
+				"libc6": nil}}},
+		},
+		{
+			descrip:     "Depends line several values",
+			line:        "Depends: libtinfo5 (= 5.9+20140913-1+deb8u2), libc6 (>= 2.15)",
+			packages:    map[string]util.PackageInfo{"libncurses5": {Version: "7"}},
+			currPackage: "libncurses5",
+			expPackage:  "libncurses5",
+			expected: map[string]util.PackageInfo{"libncurses5": {Version: "7", Deps: map[string]interface{}{
+				"libtinfo5": nil, "libc6": nil}}},
+		},
+		{
+			descrip: "Pre-Depends line after Depends",
+			line:    "Pre-Depends: multiarch-support, libtinfo5 (>= 5.9-3)",
+			packages: map[string]util.PackageInfo{"libncurses5": {Version: "7", Deps: map[string]interface{}{
+				"libtinfo5": nil, "libc6": nil}}},
+			currPackage: "libncurses5",
+			expPackage:  "libncurses5",
+			expected: map[string]util.PackageInfo{"libncurses5": {Version: "7", Deps: map[string]interface{}{
+				"multiarch-support": nil, "libtinfo5": nil, "libc6": nil}}},
+		},
+		{
+			descrip:     "Depends with pipe",
+			line:        "Depends: gcc | c-compiler, cpp, libc6-dev | libc-dev, file, autotools-dev",
+			packages:    map[string]util.PackageInfo{"libtool": {Version: "2.4.2-1.11"}},
+			currPackage: "libtool",
+			expPackage:  "libtool",
+			expected: map[string]util.PackageInfo{"libtool": {Version: "2.4.2-1.11", Deps: map[string]interface{}{
+				"gcc":           nil,
+				"c-compiler":    nil,
+				"cpp":           nil,
+				"libc6-dev":     nil,
+				"libc-dev":      nil,
+				"file":          nil,
+				"autotools-dev": nil,
+			}}},
+		},
 	}
 
 	for _, test := range testCases {
@@ -97,7 +149,7 @@ func TestParseLine(t *testing.T) {
 			t.Errorf("Expected current package to be: %s, but got: %s.", test.expPackage, currPackage)
 		}
 		if !reflect.DeepEqual(test.packages, test.expected) {
-			t.Errorf("Expected: %#v but got: %#v", test.expected, test.packages)
+			t.Errorf("Expected:\n%#v \nbut got:\n%#v", test.expected, test.packages)
 		}
 	}
 }
@@ -126,7 +178,12 @@ func TestGetAptPackages(t *testing.T) {
 			expected: map[string]util.PackageInfo{
 				"pac1": {Version: "1.0"},
 				"pac2": {Version: "2.0"},
-				"pac3": {Version: "3.0", Source: "pac_ng"},
+				"pac3": {Version: "3.0", Source: "pac_ng", Deps: map[string]interface{}{
+					"pac1":    nil,
+					"libc":    nil,
+					"libc6":   nil,
+					"debconf": nil,
+				}},
 				"pac4": {Version: "1:2.29.2-1+deb9u1", Source: "pac4_ng"}},
 		},
 	}
@@ -141,7 +198,7 @@ func TestGetAptPackages(t *testing.T) {
 			t.Errorf("Expected error but got none.")
 		}
 		if !reflect.DeepEqual(packages, test.expected) {
-			t.Errorf("Expected: %v but got: %v", test.expected, packages)
+			t.Errorf("Expected:\n%v \nbut got:\n%v", test.expected, packages)
 		}
 	}
 }
