@@ -24,7 +24,7 @@ import (
 	"github.com/snyk/snyk-docker-analyzer/util"
 )
 
-func TestParseLine(t *testing.T) {
+func TestParseDpkgStatusLine(t *testing.T) {
 	testCases := []struct {
 		descrip     string
 		line        string
@@ -144,7 +144,8 @@ func TestParseLine(t *testing.T) {
 
 	for _, test := range testCases {
 		a := AptAnalyzer{}
-		currPackage := a.parseLine(test.line, test.currPackage, test.packages)
+		currPackage := test.currPackage
+		a.parseDpkgStatusLine(test.line, &currPackage, test.packages)
 		if currPackage != test.expPackage {
 			t.Errorf("Expected current package to be: %s, but got: %s.", test.expPackage, currPackage)
 		}
@@ -197,8 +198,8 @@ func TestGetAptPackages(t *testing.T) {
 		if err == nil && test.err {
 			t.Errorf("Expected error but got none.")
 		}
-		if !reflect.DeepEqual(packages, test.expected) {
-			t.Errorf("Expected:\n%v \nbut got:\n%v", test.expected, packages)
+		if err == nil && !reflect.DeepEqual(packages, test.expected) {
+			t.Errorf("Test Case: %s\nExpected:\n%#v \nbut got:\n%#v\n", test.descrip, test.expected, packages)
 		}
 	}
 }

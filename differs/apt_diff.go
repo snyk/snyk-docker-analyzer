@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	pkgutil "github.com/snyk/snyk-docker-analyzer/pkg/util"
@@ -48,12 +49,81 @@ func (a AptAnalyzer) Analyze(image pkgutil.Image) (util.Result, error) {
 
 func (a AptAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageInfo, error) {
 	path := image.FSPath
-	packages := make(map[string]util.PackageInfo)
 	if _, err := os.Stat(path); err != nil {
 		// invalid image directory path
-		return packages, err
+		return nil, err
 	}
-	statusFile := filepath.Join(path, "var/lib/dpkg/status")
+
+	pkgs, err := a.parseDpkgStatus(path)
+	if err != nil {
+		return nil, err
+	}
+
+	autoInstalledPkgs, err := a.parseAptExtStates(path)
+	if err != nil {
+		// TODO: maybe we don't want to error here
+		return nil, err
+	}
+
+	for _, pkgName := range autoInstalledPkgs {
+		if pkg, ok := pkgs[pkgName]; ok {
+			pkg.AutoInstalled = true
+			pkgs[pkgName] = pkg
+		}
+	}
+
+	return pkgs, err
+}
+
+func (a AptAnalyzer) parseAptExtStates(imagePath string) ([]string, error) {
+	autoInstalledPkgs := []string{}
+	fname := filepath.Join(imagePath, "var/lib/apt/extended_states")
+	if _, err := os.Stat(fname); err != nil {
+		return autoInstalledPkgs, nil
+	}
+
+	if file, err := os.Open(fname); err == nil {
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		var curPkg string
+		for scanner.Scan() {
+			curPkg = a.parseAptExtStatesLine(scanner.Text(), curPkg, &autoInstalledPkgs)
+		}
+	} else {
+		return autoInstalledPkgs, err
+	}
+
+	return autoInstalledPkgs, nil
+}
+
+func (a AptAnalyzer) parseAptExtStatesLine(text string, curPkg string, autoInstalledPkgs *[]string) string {
+	line := strings.Split(text, ": ")
+	if len(line) == 2 {
+		key := line[0]
+		value := line[1]
+
+		switch key {
+		case "Package":
+			curPkg = value
+			break
+		case "Auto-Installed":
+			autoInstalled, err := strconv.Atoi(value)
+			if err != nil {
+				break
+			}
+			if autoInstalled == 1 {
+				*autoInstalledPkgs = append(*autoInstalledPkgs, curPkg)
+			}
+		}
+	}
+
+	return curPkg
+}
+
+func (a AptAnalyzer) parseDpkgStatus(imagePath string) (map[string]util.PackageInfo, error) {
+	packages := make(map[string]util.PackageInfo)
+	statusFile := filepath.Join(imagePath, "var/lib/dpkg/status")
 	if _, err := os.Stat(statusFile); err != nil {
 		// status file does not exist in this layer
 		return packages, nil
@@ -66,7 +136,7 @@ func (a AptAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageIn
 		scanner := bufio.NewScanner(file)
 		var currPackage string
 		for scanner.Scan() {
-			currPackage = a.parseLine(scanner.Text(), currPackage, packages)
+			currPackage = a.parseDpkgStatusLine(scanner.Text(), currPackage, packages)
 		}
 	} else {
 		return packages, err
@@ -75,7 +145,7 @@ func (a AptAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageIn
 	return packages, nil
 }
 
-func (a AptAnalyzer) parseLine(text string, currPackage string, packages map[string]util.PackageInfo) string {
+func (a AptAnalyzer) parseDpkgStatusLine(text string, currPackage string, packages map[string]util.PackageInfo) string {
 	line := strings.Split(text, ": ")
 	if len(line) == 2 {
 		key := line[0]

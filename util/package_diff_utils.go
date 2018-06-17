@@ -55,10 +55,11 @@ type Info struct {
 
 // PackageInfo stores the specific metadata about a package.
 type PackageInfo struct {
-	Version string
-	Source  string
-	Deps    map[string]interface{}
-	Size    int64
+	Version       string
+	Source        string
+	Deps          map[string]interface{}
+	AutoInstalled bool
+	Size          int64
 }
 
 func multiVersionDiff(infoDiff []MultiVersionInfo, packageName string, map1, map2 map[string]PackageInfo) []MultiVersionInfo {
