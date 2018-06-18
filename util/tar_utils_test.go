@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"testing"
 
 	pkgutil "github.com/snyk/snyk-docker-analyzer/pkg/util"
@@ -37,6 +38,7 @@ func TestUnTar(t *testing.T) {
 		starter   string
 		whitelist []string
 		err       bool
+		skipDiff  bool
 	}{
 		{
 			descrip:  "Tar with files",
@@ -84,6 +86,13 @@ func TestUnTar(t *testing.T) {
 			expected:  "testTars/la-croix1-actual",
 			whitelist: []string{"testTars/la-croix-whitelist/nest"},
 		},
+		{
+			descrip:  "Tar with evil symlink",
+			tarPath:  "testTars/symlink-invalid.tar",
+			target:   "testTars/symlink-invalid",
+			err:      true,
+			skipDiff: true,
+		},
 	}
 	for _, test := range testCases {
 		remove := true
@@ -94,7 +103,7 @@ func TestUnTar(t *testing.T) {
 		if err != nil {
 			t.Errorf("Error opening tar: %s", err)
 		}
-		if err := pkgutil.UnTar(r, test.target, test.whitelist); err != nil && !test.err {
+		if err = pkgutil.UnTar(r, test.target, test.whitelist); err != nil && !test.err {
 			t.Errorf(test.descrip, "Got unexpected error: %s", err)
 			remove = false
 		}
@@ -102,7 +111,7 @@ func TestUnTar(t *testing.T) {
 			t.Errorf(test.descrip, "Expected error but got none: %s", err)
 			remove = false
 		}
-		if !dirEquals(test.expected, test.target) {
+		if !test.skipDiff && !dirEquals(test.expected, test.target) {
 			t.Error(test.descrip, ": Directory created not correct structure.")
 			remove = false
 		}
@@ -211,4 +220,35 @@ func dirEquals(actual string, path string) bool {
 		fmt.Printf("%v", diff)
 	}
 	return same
+}
+
+func TestSymlinks(t *testing.T) {
+	remove := true
+	target := "testTars/symlink-valid"
+	starter := "testTars/symlink-valid-starter"
+	r, err := os.Open("testTars/symlink-valid.tar")
+	if err != nil {
+		t.Errorf("Error opening tar: %s", err)
+	}
+	err = CopyDir(starter, target)
+	if err != nil {
+		t.Errorf("Failed to copy starter: %s", err)
+		remove = false
+	}
+	err = pkgutil.UnTar(r, target, []string{})
+	if err != nil {
+		t.Errorf("Got unexpected error: %s", err)
+		remove = false
+	}
+	var destination string
+	if err == nil {
+		destination, err = os.Readlink(filepath.Join(target, "foo/bar.txt"))
+	}
+	if destination != "../bar.txt" {
+		t.Errorf("Unexpected symlink destination: %s", destination)
+		remove = true
+	}
+	if remove {
+		os.RemoveAll(target)
+	}
 }
