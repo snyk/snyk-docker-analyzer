@@ -32,6 +32,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/snyk/snyk-docker-analyzer/cmd/util/output"
 	pkgutil "github.com/snyk/snyk-docker-analyzer/pkg/util"
 	"github.com/snyk/snyk-docker-analyzer/util"
 
@@ -92,7 +93,48 @@ func (a RPMAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageIn
 // rpmDataFromContainer runs image in a container, queries the data of
 // installed rpm packages and returns a map of packages.
 func rpmDataFromContainer(image pkgutil.Image) (map[string]util.PackageInfo, error) {
-	packages := make(map[string]util.PackageInfo)
+	//TODO: check for err
+	cmdOut, _ := runCommandInImg([]string{
+		"rpm",
+		"--nodigest",
+		"--nosignature",
+		"-qa",
+		"--qf",
+		"%{NAME}\t%|EPOCH?{%{EPOCH}:}|%{VERSION}-%{RELEASE}\t%{SIZE}\n"},
+		image)
+
+	allPackages, _ := parsePackageData(cmdOut)
+
+	deplistPkgs := ""
+	for currentPkg, _ := range allPackages {
+		curDeplistPkg := fmt.Sprintf("yum deplist %s; ", currentPkg)
+		deplistPkgs += curDeplistPkg
+	}
+	output.PrintToStdErr("list: %s\n", deplistPkgs)
+
+	deplistPkgsCmd := []string{"sh", "-c", deplistPkgs}
+	//TODO: check for err
+	deplistPkgsOut, _ := runCommandInImg(deplistPkgsCmd, image)
+
+	curDeps := []string{}
+	for _, line := range deplistPkgsOut {
+		if strings.HasPrefix(line, "package: ") {
+			split := strings.Split(line, "package: ")
+			output.PrintToStdErr("pkg: %s\n", split[1])
+			// packages[split[1]]
+		}
+
+		if strings.HasPrefix(line, "dependency: ") {
+			split := strings.Split(line, "dependency: ")
+			curDeps = append(curDeps, split[1])
+		}
+	}
+
+	return nil, nil
+}
+
+func runCommandInImg(cmd []string, image pkgutil.Image) ([]string, error) {
+	packages := []string{}
 
 	client, err := godocker.NewClientFromEnv()
 	if err != nil {
@@ -155,7 +197,9 @@ func rpmDataFromContainer(image pkgutil.Image) (map[string]util.PackageInfo, err
 	}
 
 	contConf := godocker.Config{
-		Cmd:   []string{"rpm", "--nodigest", "--nosignature", "-qa", "--qf", "%{NAME}\t%|EPOCH?{%{EPOCH}:}|%{VERSION}-%{RELEASE}\t%{SIZE}\n"},
+		// Cmd: []string{"yum", "list", "installed"},
+		Cmd: cmd,
+		// Cmd:   []string{"rpm", "--nodigest", "--nosignature", "-qa", "--qf", "%{NAME}\t%|EPOCH?{%{EPOCH}:}|%{VERSION}-%{RELEASE}\t%{SIZE}\n"},
 		Image: imageName,
 	}
 
@@ -203,8 +247,7 @@ func rpmDataFromContainer(image pkgutil.Image) (map[string]util.PackageInfo, err
 		return packages, fmt.Errorf("non-zero exit code %d: %s", exitCode, errBuf.String())
 	}
 
-	output := strings.Split(outBuf.String(), "\n")
-	return parsePackageData(output)
+	return strings.Split(outBuf.String(), "\n"), nil
 }
 
 // parsePackageData parses the package data of each line in rpmOutput and

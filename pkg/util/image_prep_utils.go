@@ -105,8 +105,10 @@ func getImage(p Prepper) (Image, error) {
 	if !HasTag(p.GetSource()) {
 		p.SetSource(p.GetSource() + LatestTag)
 	}
-	output.PrintToStdErr("Retrieving image %s from source %s\n", p.GetSource(), p.Name())
+	output.PrintToStdErr("1Retrieving image %s from source %s\n", p.GetSource(), p.Name())
+	// output.PrintToStdErr("2Retrieving image %s from source %s\n", p.GetSource(), p.Name())
 	imgPath, err := p.GetFileSystem()
+	output.PrintToStdErr(imgPath)
 	if err != nil {
 		return Image{}, err
 	}

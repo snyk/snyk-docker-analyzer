@@ -60,7 +60,7 @@ func (p *DaemonPrepper) GetFileSystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	defer src.Close()
 	sanitizedName := strings.Replace(p.Source, ":", "", -1)
 	sanitizedName = strings.Replace(sanitizedName, "/", "", -1)
 

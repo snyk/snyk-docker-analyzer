@@ -92,7 +92,7 @@ func analyzeImage(imageName string, analyzerArgs []string) error {
 	outputResults(analyses)
 
 	if save {
-		logrus.Infof("Image was saved at %s", image.FSPath)
+		output.PrintToStdErr("Image was saved at %s", image.FSPath)
 	}
 
 	return nil
