@@ -140,6 +140,15 @@ func TestParseDpkgStatusLine(t *testing.T) {
 				"autotools-dev": nil,
 			}}},
 		},
+		{
+			descrip:     "Provides line",
+			line:        "Provides: libpng-dev, libpng12-0-dev, libpng3-dev",
+			packages:    map[string]util.PackageInfo{},
+			currPackage: "libpng12-dev",
+			expPackage:  "libpng12-dev",
+			expected: map[string]util.PackageInfo{"libpng12-dev": {Provides: []string{
+				"libpng-dev", "libpng12-0-dev", "libpng3-dev"}}},
+		},
 	}
 
 	for _, test := range testCases {
@@ -147,10 +156,12 @@ func TestParseDpkgStatusLine(t *testing.T) {
 		currPackage := test.currPackage
 		a.parseDpkgStatusLine(test.line, &currPackage, test.packages)
 		if currPackage != test.expPackage {
-			t.Errorf("Expected current package to be: %s, but got: %s.", test.expPackage, currPackage)
+			t.Errorf("Test case: %s:\nExpected current package to be: %s, but got: %s.",
+				test.descrip, test.expPackage, currPackage)
 		}
 		if !reflect.DeepEqual(test.packages, test.expected) {
-			t.Errorf("Expected:\n%#v \nbut got:\n%#v", test.expected, test.packages)
+			t.Errorf("Test case: %s:\nExpected:\n%#v \nbut got:\n%#v",
+				test.descrip, test.expected, test.packages)
 		}
 	}
 }
@@ -174,11 +185,25 @@ func TestGetAptPackages(t *testing.T) {
 			expected: map[string]util.PackageInfo{},
 		},
 		{
+			descrip: "no var/lib/apt/extended_states",
+			path:    "testDirs/dpkgButNoAptExt",
+			expected: map[string]util.PackageInfo{
+				"pac1": {Version: "1.0"},
+				"pac2": {Version: "2.0", Provides: []string{"the-pac"}},
+				"pac3": {Version: "3.0", Source: "pac_ng", Deps: map[string]interface{}{
+					"pac1":    nil,
+					"libc":    nil,
+					"libc6":   nil,
+					"debconf": nil,
+				}},
+				"pac4": {Version: "1:2.29.2-1+deb9u1", Source: "pac4_ng"}},
+		},
+		{
 			descrip: "packages in expected location",
 			path:    "testDirs/packageOne",
 			expected: map[string]util.PackageInfo{
 				"pac1": {Version: "1.0"},
-				"pac2": {Version: "2.0"},
+				"pac2": {Version: "2.0", Provides: []string{"the-pac"}, AutoInstalled: true},
 				"pac3": {Version: "3.0", Source: "pac_ng", Deps: map[string]interface{}{
 					"pac1":    nil,
 					"libc":    nil,
@@ -193,13 +218,14 @@ func TestGetAptPackages(t *testing.T) {
 		image := pkgutil.Image{FSPath: test.path}
 		packages, err := d.getPackages(image)
 		if err != nil && !test.err {
-			t.Errorf("Got unexpected error: %s", err)
+			t.Errorf("Test case: %s:\nGot unexpected error: %s", test.descrip, err)
 		}
 		if err == nil && test.err {
-			t.Errorf("Expected error but got none.")
+			t.Errorf("Test case: %s:\nExpected error but got none.", test.descrip)
 		}
 		if err == nil && !reflect.DeepEqual(packages, test.expected) {
-			t.Errorf("Test Case: %s\nExpected:\n%#v \nbut got:\n%#v\n", test.descrip, test.expected, packages)
+			t.Errorf("Test Case: %s:\nExpected:\n%#v \nbut got:\n%#v\n",
+				test.descrip, test.expected, packages)
 		}
 	}
 }

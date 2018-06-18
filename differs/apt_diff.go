@@ -36,7 +36,7 @@ func (a AptAnalyzer) Name() string {
 	return "AptAnalyzer"
 }
 
-// AptDiff compares the packages installed by apt-get.
+// Diff compares the packages installed by apt-get.
 func (a AptAnalyzer) Diff(image1, image2 pkgutil.Image) (util.Result, error) {
 	diff, err := singleVersionDiff(image1, image2, a)
 	return diff, err
@@ -61,8 +61,8 @@ func (a AptAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageIn
 
 	autoInstalledPkgs, err := a.parseAptExtStates(path)
 	if err != nil {
-		// TODO: maybe we don't want to error here
-		return nil, err
+		// let's not fail if we failed to parse the extended states
+		return pkgs, nil
 	}
 
 	for _, pkgName := range autoInstalledPkgs {
@@ -77,27 +77,27 @@ func (a AptAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageIn
 
 func (a AptAnalyzer) parseAptExtStates(imagePath string) ([]string, error) {
 	autoInstalledPkgs := []string{}
-	fname := filepath.Join(imagePath, "var/lib/apt/extended_states")
-	if _, err := os.Stat(fname); err != nil {
-		return autoInstalledPkgs, nil
+	fpath := filepath.Join(imagePath, "var/lib/apt/extended_states")
+	if _, err := os.Stat(fpath); err != nil {
+		return nil, err
 	}
 
-	if file, err := os.Open(fname); err == nil {
-		defer file.Close()
+	file, err := os.Open(fpath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
 
-		scanner := bufio.NewScanner(file)
-		var curPkg string
-		for scanner.Scan() {
-			curPkg = a.parseAptExtStatesLine(scanner.Text(), curPkg, &autoInstalledPkgs)
-		}
-	} else {
-		return autoInstalledPkgs, err
+	scanner := bufio.NewScanner(file)
+	var curPkg string
+	for scanner.Scan() {
+		a.parseAptExtStatesLine(scanner.Text(), &curPkg, &autoInstalledPkgs)
 	}
 
 	return autoInstalledPkgs, nil
 }
 
-func (a AptAnalyzer) parseAptExtStatesLine(text string, curPkg string, autoInstalledPkgs *[]string) string {
+func (a AptAnalyzer) parseAptExtStatesLine(text string, curPkg *string, autoInstalledPkgs *[]string) {
 	line := strings.Split(text, ": ")
 	if len(line) == 2 {
 		key := line[0]
@@ -105,7 +105,7 @@ func (a AptAnalyzer) parseAptExtStatesLine(text string, curPkg string, autoInsta
 
 		switch key {
 		case "Package":
-			curPkg = value
+			*curPkg = value
 			break
 		case "Auto-Installed":
 			autoInstalled, err := strconv.Atoi(value)
@@ -113,89 +113,96 @@ func (a AptAnalyzer) parseAptExtStatesLine(text string, curPkg string, autoInsta
 				break
 			}
 			if autoInstalled == 1 {
-				*autoInstalledPkgs = append(*autoInstalledPkgs, curPkg)
+				*autoInstalledPkgs = append(*autoInstalledPkgs, *curPkg)
 			}
 		}
 	}
-
-	return curPkg
 }
 
 func (a AptAnalyzer) parseDpkgStatus(imagePath string) (map[string]util.PackageInfo, error) {
 	packages := make(map[string]util.PackageInfo)
-	statusFile := filepath.Join(imagePath, "var/lib/dpkg/status")
-	if _, err := os.Stat(statusFile); err != nil {
+	fpath := filepath.Join(imagePath, "var/lib/dpkg/status")
+	if _, err := os.Stat(fpath); err != nil {
 		// status file does not exist in this layer
 		return packages, nil
 	}
-	if file, err := os.Open(statusFile); err == nil {
-		// make sure it gets closed
-		defer file.Close()
 
-		// create a new scanner and read the file line by line
-		scanner := bufio.NewScanner(file)
-		var currPackage string
-		for scanner.Scan() {
-			currPackage = a.parseDpkgStatusLine(scanner.Text(), currPackage, packages)
-		}
-	} else {
-		return packages, err
+	file, err := os.Open(fpath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	var curPkg string
+	for scanner.Scan() {
+		a.parseDpkgStatusLine(scanner.Text(), &curPkg, packages)
 	}
 
 	return packages, nil
 }
 
-func (a AptAnalyzer) parseDpkgStatusLine(text string, currPackage string, packages map[string]util.PackageInfo) string {
+func (a AptAnalyzer) parseDpkgStatusLine(text string, curPkg *string, packages map[string]util.PackageInfo) {
 	line := strings.Split(text, ": ")
 	if len(line) == 2 {
 		key := line[0]
 		value := line[1]
 
+		getCurPkgInfo := func(name string) util.PackageInfo {
+			info, ok := packages[name]
+			if !ok {
+				info = util.PackageInfo{}
+			}
+			return info
+		}
+
 		switch key {
 		case "Package":
-			return value
+			*curPkg = value
+			break
 		case "Source":
 			source := strings.Fields(value)[0]
-			currPackageInfo, ok := packages[currPackage]
-			if !ok {
-				currPackageInfo = util.PackageInfo{}
+
+			curPkgInfo := getCurPkgInfo(*curPkg)
+			curPkgInfo.Source = source
+			packages[*curPkg] = curPkgInfo
+			break
+		case "Provides":
+			curPkgInfo := getCurPkgInfo(*curPkg)
+
+			for _, elem := range strings.Split(value, ",") {
+				name := strings.Fields(elem)[0]
+				curPkgInfo.Provides = append(curPkgInfo.Provides, name)
 			}
-			currPackageInfo.Source = source
-			packages[currPackage] = currPackageInfo
-			return currPackage
+
+			packages[*curPkg] = curPkgInfo
+			break
 		case "Version":
-			if packages[currPackage].Version != "" {
+			if packages[*curPkg].Version != "" {
 				logrus.Warningln("Multiple versions of same package detected.  Diffing such multi-versioning not yet supported.")
 				break
 			}
-			currPackageInfo, ok := packages[currPackage]
-			if !ok {
-				currPackageInfo = util.PackageInfo{}
-			}
-			currPackageInfo.Version = value
-			packages[currPackage] = currPackageInfo
+
+			curPkgInfo := getCurPkgInfo(*curPkg)
+
+			curPkgInfo.Version = value
+			packages[*curPkg] = curPkgInfo
 			break
 		case "Depends", "Pre-Depends":
-			currPackageInfo, ok := packages[currPackage]
-			if !ok {
-				currPackageInfo = util.PackageInfo{}
-			}
-
-			if currPackageInfo.Deps == nil {
-				currPackageInfo.Deps = map[string]interface{}{}
+			curPkgInfo := getCurPkgInfo(*curPkg)
+			if curPkgInfo.Deps == nil {
+				curPkgInfo.Deps = map[string]interface{}{}
 			}
 
 			for _, depElem := range strings.Split(value, ",") {
 				for _, dep := range strings.Split(depElem, "|") {
 					name := strings.Fields(dep)[0]
-					currPackageInfo.Deps[name] = nil
+					curPkgInfo.Deps[name] = nil
 				}
 			}
 
-			packages[currPackage] = currPackageInfo
+			packages[*curPkg] = curPkgInfo
 			break
 		}
 	}
-
-	return currPackage
 }

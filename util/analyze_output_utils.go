@@ -140,6 +140,7 @@ func (r SingleVersionPackageAnalyzeResult) OutputText(diffType string, format st
 type PackageOutput struct {
 	Name          string
 	Source        string
+	Provides      []string
 	Path          string `json:",omitempty"`
 	Version       string
 	Deps          map[string]interface{}
@@ -153,6 +154,7 @@ func getSingleVersionPackageOutput(packageMap map[string]PackageInfo) []PackageO
 		packages = append(packages, PackageOutput{
 			Name:          name,
 			Source:        info.Source,
+			Provides:      info.Provides,
 			Version:       info.Version,
 			Deps:          info.Deps,
 			AutoInstalled: info.AutoInstalled,

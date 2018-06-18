@@ -57,6 +57,7 @@ type Info struct {
 type PackageInfo struct {
 	Version       string
 	Source        string
+	Provides      []string
 	Deps          map[string]interface{}
 	AutoInstalled bool
 	Size          int64
