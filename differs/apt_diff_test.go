@@ -24,7 +24,7 @@ import (
 	"github.com/snyk/snyk-docker-analyzer/util"
 )
 
-func TestParseLine(t *testing.T) {
+func TestParseDpkgStatusLine(t *testing.T) {
 	testCases := []struct {
 		descrip     string
 		line        string
@@ -88,16 +88,80 @@ func TestParseLine(t *testing.T) {
 			expPackage:  "La-Croix",
 			expected:    map[string]util.PackageInfo{"La-Croix": {Version: "Lime"}},
 		},
+		{
+			descrip:     "Depends line one value",
+			line:        "Depends: libc6",
+			packages:    map[string]util.PackageInfo{"make": {Version: "123"}},
+			currPackage: "make",
+			expPackage:  "make",
+			expected:    map[string]util.PackageInfo{"make": {Version: "123", Deps: map[string]interface{}{"libc6": nil}}},
+		},
+		{
+			descrip:     "Depends line several values",
+			line:        "Depends: libc6",
+			packages:    map[string]util.PackageInfo{"make": {Version: "123"}},
+			currPackage: "make",
+			expPackage:  "make",
+			expected: map[string]util.PackageInfo{"make": {Version: "123", Deps: map[string]interface{}{
+				"libc6": nil}}},
+		},
+		{
+			descrip:     "Depends line several values",
+			line:        "Depends: libtinfo5 (= 5.9+20140913-1+deb8u2), libc6 (>= 2.15)",
+			packages:    map[string]util.PackageInfo{"libncurses5": {Version: "7"}},
+			currPackage: "libncurses5",
+			expPackage:  "libncurses5",
+			expected: map[string]util.PackageInfo{"libncurses5": {Version: "7", Deps: map[string]interface{}{
+				"libtinfo5": nil, "libc6": nil}}},
+		},
+		{
+			descrip: "Pre-Depends line after Depends",
+			line:    "Pre-Depends: multiarch-support, libtinfo5 (>= 5.9-3)",
+			packages: map[string]util.PackageInfo{"libncurses5": {Version: "7", Deps: map[string]interface{}{
+				"libtinfo5": nil, "libc6": nil}}},
+			currPackage: "libncurses5",
+			expPackage:  "libncurses5",
+			expected: map[string]util.PackageInfo{"libncurses5": {Version: "7", Deps: map[string]interface{}{
+				"multiarch-support": nil, "libtinfo5": nil, "libc6": nil}}},
+		},
+		{
+			descrip:     "Depends with pipe",
+			line:        "Depends: gcc | c-compiler, cpp, libc6-dev | libc-dev, file, autotools-dev",
+			packages:    map[string]util.PackageInfo{"libtool": {Version: "2.4.2-1.11"}},
+			currPackage: "libtool",
+			expPackage:  "libtool",
+			expected: map[string]util.PackageInfo{"libtool": {Version: "2.4.2-1.11", Deps: map[string]interface{}{
+				"gcc":           nil,
+				"c-compiler":    nil,
+				"cpp":           nil,
+				"libc6-dev":     nil,
+				"libc-dev":      nil,
+				"file":          nil,
+				"autotools-dev": nil,
+			}}},
+		},
+		{
+			descrip:     "Provides line",
+			line:        "Provides: libpng-dev, libpng12-0-dev, libpng3-dev",
+			packages:    map[string]util.PackageInfo{},
+			currPackage: "libpng12-dev",
+			expPackage:  "libpng12-dev",
+			expected: map[string]util.PackageInfo{"libpng12-dev": {Provides: []string{
+				"libpng-dev", "libpng12-0-dev", "libpng3-dev"}}},
+		},
 	}
 
 	for _, test := range testCases {
 		a := AptAnalyzer{}
-		currPackage := a.parseLine(test.line, test.currPackage, test.packages)
+		currPackage := test.currPackage
+		a.parseDpkgStatusLine(test.line, &currPackage, test.packages)
 		if currPackage != test.expPackage {
-			t.Errorf("Expected current package to be: %s, but got: %s.", test.expPackage, currPackage)
+			t.Errorf("Test case: %s:\nExpected current package to be: %s, but got: %s.",
+				test.descrip, test.expPackage, currPackage)
 		}
 		if !reflect.DeepEqual(test.packages, test.expected) {
-			t.Errorf("Expected: %#v but got: %#v", test.expected, test.packages)
+			t.Errorf("Test case: %s:\nExpected:\n%#v \nbut got:\n%#v",
+				test.descrip, test.expected, test.packages)
 		}
 	}
 }
@@ -121,12 +185,31 @@ func TestGetAptPackages(t *testing.T) {
 			expected: map[string]util.PackageInfo{},
 		},
 		{
+			descrip: "no var/lib/apt/extended_states",
+			path:    "testDirs/dpkgButNoAptExt",
+			expected: map[string]util.PackageInfo{
+				"pac1": {Version: "1.0"},
+				"pac2": {Version: "2.0", Provides: []string{"the-pac"}},
+				"pac3": {Version: "3.0", Source: "pac_ng", Deps: map[string]interface{}{
+					"pac1":    nil,
+					"libc":    nil,
+					"libc6":   nil,
+					"debconf": nil,
+				}},
+				"pac4": {Version: "1:2.29.2-1+deb9u1", Source: "pac4_ng"}},
+		},
+		{
 			descrip: "packages in expected location",
 			path:    "testDirs/packageOne",
 			expected: map[string]util.PackageInfo{
 				"pac1": {Version: "1.0"},
-				"pac2": {Version: "2.0"},
-				"pac3": {Version: "3.0", Source: "pac_ng"},
+				"pac2": {Version: "2.0", Provides: []string{"the-pac"}, AutoInstalled: true},
+				"pac3": {Version: "3.0", Source: "pac_ng", Deps: map[string]interface{}{
+					"pac1":    nil,
+					"libc":    nil,
+					"libc6":   nil,
+					"debconf": nil,
+				}},
 				"pac4": {Version: "1:2.29.2-1+deb9u1", Source: "pac4_ng"}},
 		},
 	}
@@ -135,13 +218,14 @@ func TestGetAptPackages(t *testing.T) {
 		image := pkgutil.Image{FSPath: test.path}
 		packages, err := d.getPackages(image)
 		if err != nil && !test.err {
-			t.Errorf("Got unexpected error: %s", err)
+			t.Errorf("Test case: %s:\nGot unexpected error: %s", test.descrip, err)
 		}
 		if err == nil && test.err {
-			t.Errorf("Expected error but got none.")
+			t.Errorf("Test case: %s:\nExpected error but got none.", test.descrip)
 		}
-		if !reflect.DeepEqual(packages, test.expected) {
-			t.Errorf("Expected: %v but got: %v", test.expected, packages)
+		if err == nil && !reflect.DeepEqual(packages, test.expected) {
+			t.Errorf("Test Case: %s:\nExpected:\n%#v \nbut got:\n%#v\n",
+				test.descrip, test.expected, packages)
 		}
 	}
 }
