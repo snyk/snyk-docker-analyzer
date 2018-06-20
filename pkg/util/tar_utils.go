@@ -31,7 +31,13 @@ import (
 // Map of target:linkname
 var hardlinks = make(map[string]string)
 
+type OriginalPerm struct {
+	path string
+	perm os.FileMode
+}
+
 func unpackTar(tr *tar.Reader, path string, whitelist []string) error {
+	originalPerms := make([]OriginalPerm, 0)
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
@@ -42,8 +48,14 @@ func unpackTar(tr *tar.Reader, path string, whitelist []string) error {
 			logrus.Error("Error getting next tar header")
 			return err
 		}
+		pathSandbox := filepath.Clean(path) + string(os.PathSeparator)
+		target := filepath.Clean(filepath.Join(path, header.Name))
+		// Prevent Zip Slip
+		if !strings.HasPrefix(target, pathSandbox) {
+			return fmt.Errorf("Tar file tried to escape extraction root %s", target)
+		}
 		if strings.Contains(header.Name, ".wh.") {
-			rmPath := filepath.Join(path, header.Name)
+			rmPath := target
 			// Remove the .wh file if it was extracted.
 			if _, err := os.Stat(rmPath); !os.IsNotExist(err) {
 				if err := os.Remove(rmPath); err != nil {
@@ -58,20 +70,27 @@ func unpackTar(tr *tar.Reader, path string, whitelist []string) error {
 			}
 			continue
 		}
-		target := filepath.Join(path, header.Name)
 		// Make sure the target isn't part of the whitelist
 		if checkWhitelist(target, whitelist) {
 			continue
 		}
 		mode := header.FileInfo().Mode()
-		const CHMOD_RW_OWNER_R_ALL = 0644
-		const CHMOD_X_OWNER = 0100
-		mode = (mode & CHMOD_X_OWNER) | CHMOD_RW_OWNER_R_ALL
 		switch header.Typeflag {
 
 		// if its a dir and it doesn't exist create it
 		case tar.TypeDir:
 			if _, err := os.Stat(target); os.IsNotExist(err) {
+				if mode.Perm()&(1<<(uint(7))) == 0 {
+					logrus.Debugf("Write permission bit not set on %s by default; setting manually", target)
+					originalMode := mode
+					mode = mode | (1 << uint(7))
+					// keep track of original file permission to reset later
+					originalPerms = append(originalPerms, OriginalPerm{
+						path: target,
+						perm: originalMode,
+					})
+				}
+				logrus.Debugf("Creating directory %s with permissions %v", target, mode)
 				if err := os.MkdirAll(target, mode); err != nil {
 					return err
 				}
@@ -95,11 +114,13 @@ func unpackTar(tr *tar.Reader, path string, whitelist []string) error {
 			// Explicitly delete an existing file before continuing.
 			if _, err := os.Stat(target); !os.IsNotExist(err) {
 				logrus.Debugf("Removing %s for overwrite.", target)
-				if err := os.Remove(target); err != nil {
+				if err := os.RemoveAll(target); err != nil {
+					logrus.Errorf("Error removing file %s", target)
 					return err
 				}
 			}
 
+			logrus.Debugf("Creating file %s with permissions %v", target, mode)
 			currFile, err := os.Create(target)
 			if err != nil {
 				logrus.Errorf("Error creating file %s %s", target, err)
@@ -116,17 +137,30 @@ func unpackTar(tr *tar.Reader, path string, whitelist []string) error {
 			}
 			currFile.Close()
 		case tar.TypeSymlink:
+			var linkname string
+			if strings.HasPrefix(filepath.Clean(header.Linkname), "/") {
+				// absolute paths need to be put back in the sandbox
+				linkname = filepath.Clean(filepath.Join(path, header.Linkname))
+			} else {
+				// relative paths need to be kept in tact (but validated as absolute)
+				linkname = header.Linkname
+				resolvedLinkname := filepath.Clean(filepath.Join(filepath.Dir(target), header.Linkname))
+				if !strings.HasPrefix(resolvedLinkname, pathSandbox) {
+					return fmt.Errorf("Relative symlink tried to escape extraction root %s", header.Linkname)
+				}
+			}
+
 			// It's possible we end up creating files that can't be overwritten based on their permissions.
 			// Explicitly delete an existing file before continuing.
-			if _, err := os.Stat(target); !os.IsNotExist(err) {
-				logrus.Debugf("Removing %s to create symlink.", target)
+			if _, err := os.Lstat(target); !os.IsNotExist(err) {
+				logrus.Debugf("Removing %s to create symlink", target)
 				if err := os.RemoveAll(target); err != nil {
 					logrus.Debugf("Unable to remove %s: %s", target, err)
 				}
 			}
 
-			if err = os.Symlink(header.Linkname, target); err != nil {
-				logrus.Errorf("Failed to create symlink between %s and %s: %s", header.Linkname, target, err)
+			if err = os.Symlink(linkname, target); err != nil {
+				logrus.Errorf("Failed to create symlink between %s and %s: %s", linkname, target, err)
 			}
 		case tar.TypeLink:
 			linkname := filepath.Join(path, header.Linkname)
@@ -147,6 +181,13 @@ func unpackTar(tr *tar.Reader, path string, whitelist []string) error {
 			if err := resolveHardlink(linkname, target); err != nil {
 				return errors.Wrap(err, fmt.Sprintf("Unable to create hard link from %s to %s", linkname, target))
 			}
+		}
+	}
+
+	// reset all original file
+	for _, perm := range originalPerms {
+		if err := os.Chmod(perm.path, perm.perm); err != nil {
+			return err
 		}
 	}
 	return nil
