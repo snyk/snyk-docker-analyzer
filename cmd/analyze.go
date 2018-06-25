@@ -72,6 +72,8 @@ func analyzeImage(imageName string, analyzerArgs []string) error {
 	}
 
 	image, err := prepper.GetImage()
+	imageID := image.Config.Config.ImageID
+	output.PrintToStdErr("Image ID: %s\n", imageID)
 
 	if !save {
 		defer pkgutil.CleanupImage(image)
@@ -84,7 +86,7 @@ func analyzeImage(imageName string, analyzerArgs []string) error {
 	if err != nil {
 		return err
 	}
-	output.PrintToStdErr("OS release detected: %s", osRelease)
+	output.PrintToStdErr("OS release detected: %s\n", osRelease)
 
 	req := differs.SingleRequest{
 		Image:        image,
@@ -94,8 +96,8 @@ func analyzeImage(imageName string, analyzerArgs []string) error {
 		return fmt.Errorf("Error performing image analysis: %s", err)
 	}
 
-	output.PrintToStdErr("Retrieving analyses")
-	outputResults(analyses, osRelease)
+	output.PrintToStdErr("Retrieving analyses\n")
+	outputResults(imageID, osRelease, analyses)
 
 	if save {
 		logrus.Infof("Image was saved at %s", image.FSPath)
