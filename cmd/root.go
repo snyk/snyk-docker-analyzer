@@ -58,7 +58,7 @@ var RootCmd = &cobra.Command{
 	},
 }
 
-func outputResults(resultMap map[string]util.Result, osRelease pkgutil.OSRelease) {
+func outputResults(imageID string, osRelease pkgutil.OSRelease, resultMap map[string]util.Result) {
 	// Outputs diff/analysis results in alphabetical order by analyzer name
 	sortedTypes := []string{}
 	for analyzerType := range resultMap {
@@ -72,6 +72,7 @@ func outputResults(resultMap map[string]util.Result, osRelease pkgutil.OSRelease
 		results[i] = result.OutputStruct()
 	}
 	output := map[string]interface{}{
+		"imageID":   imageID,
 		"osRelease": osRelease,
 		"results":   results,
 	}

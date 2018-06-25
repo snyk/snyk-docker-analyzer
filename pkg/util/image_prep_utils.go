@@ -93,6 +93,7 @@ type ConfigObject struct {
 	Volumes      map[string]struct{} `json:"Volumes"`
 	Workdir      string              `json:"WorkingDir"`
 	Labels       map[string]string   `json:"Labels"`
+	ImageID      string              `json:"Image"`
 }
 
 type ConfigSchema struct {
