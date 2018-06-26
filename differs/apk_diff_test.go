@@ -64,16 +64,97 @@ func TestApkParseLine(t *testing.T) {
 			expPackage:  "La-Croix",
 			expected:    map[string]util.PackageInfo{"La-Croix": {Version: "Lime+extra_lime"}},
 		},
+		{
+			descrip:     "Depends line one value",
+			line:        "D:musl-utils",
+			packages:    map[string]util.PackageInfo{"libc-utils": {Version: "0.7.1-r0"}},
+			currPackage: "libc-utils",
+			expPackage:  "libc-utils",
+			expected: map[string]util.PackageInfo{"libc-utils": {Version: "0.7.1-r0", Deps: map[string]interface{}{
+				"musl-utils": nil,
+			}}},
+		},
+		{
+			descrip:     "Depends line multiple values",
+			line:        "D:musl-utils other-utils",
+			packages:    map[string]util.PackageInfo{"libc-utils": {Version: "0.7.1-r0"}},
+			currPackage: "libc-utils",
+			expPackage:  "libc-utils",
+			expected: map[string]util.PackageInfo{"libc-utils": {Version: "0.7.1-r0", Deps: map[string]interface{}{
+				"musl-utils":  nil,
+				"other-utils": nil,
+			}}},
+		},
+		{
+			descrip:     "Depends line multiple values with colons",
+			line:        "D:lua so:libc.so.0.9.32 so:libdl.so.0.9.32 so:libm.so.0.9.32 so:libncurses.so.5",
+			packages:    map[string]util.PackageInfo{"vim": {Version: "7.3.754-r0"}},
+			currPackage: "vim",
+			expPackage:  "vim",
+			expected: map[string]util.PackageInfo{"vim": {Version: "7.3.754-r0", Deps: map[string]interface{}{
+				"lua":                nil,
+				"so:libc.so.0.9.32":  nil,
+				"so:libdl.so.0.9.32": nil,
+				"so:libm.so.0.9.32":  nil,
+				"so:libncurses.so.5": nil,
+			}}},
+		},
+		{
+			descrip:     "Depends line multiple values with exclusion",
+			line:        "D:!uclibc-utils scanelf musl=1.1.18-r3 so:libc.musl-x86_64.so.1",
+			packages:    map[string]util.PackageInfo{"musl-utils": {Version: "1.1.18-r3"}},
+			currPackage: "musl-utils",
+			expPackage:  "musl-utils",
+			expected: map[string]util.PackageInfo{"musl-utils": {Version: "1.1.18-r3", Deps: map[string]interface{}{
+				"scanelf": nil,
+				"musl":    nil,
+				"so:libc.musl-x86_64.so.1": nil,
+			}}},
+		},
+		{
+			descrip:     "Depends line (r)",
+			line:        "r:libiconv uclibc-utils",
+			packages:    map[string]util.PackageInfo{"musl-utils": {Version: "1.1.18-r3"}},
+			currPackage: "musl-utils",
+			expPackage:  "musl-utils",
+			expected: map[string]util.PackageInfo{"musl-utils": {Version: "1.1.18-r3", Deps: map[string]interface{}{
+				"libiconv":     nil,
+				"uclibc-utils": nil,
+			}}},
+		},
+		{
+			descrip:     "Provides line single value",
+			line:        "p:so:ld64-uClibc.so.0.9.32=0",
+			packages:    map[string]util.PackageInfo{"libc": {Version: "0.9.33.2-r22"}},
+			currPackage: "libc",
+			expPackage:  "libc",
+			expected: map[string]util.PackageInfo{"libc": {Version: "0.9.33.2-r22", Provides: []string{
+				"so:ld64-uClibc.so.0.9.32",
+			}}},
+		},
+		{
+			descrip:     "Provides line multiple values",
+			line:        "p:so:ld64-uClibc.so.0.9.32=0 so:libc.so.0.9.32=0 so:libcrypt.so.0.9.32=0",
+			packages:    map[string]util.PackageInfo{"libc": {Version: "0.9.33.2-r22"}},
+			currPackage: "libc",
+			expPackage:  "libc",
+			expected: map[string]util.PackageInfo{"libc": {Version: "0.9.33.2-r22", Provides: []string{
+				"so:ld64-uClibc.so.0.9.32", "so:libc.so.0.9.32", "so:libcrypt.so.0.9.32",
+			}}},
+		},
 	}
 
 	for _, test := range testCases {
 		a := ApkAnalyzer{}
-		currPackage := a.parseLine(test.line, test.currPackage, test.packages)
+		currPackage := test.currPackage
+		a.parseLine(test.line, &currPackage, test.packages)
 		if currPackage != test.expPackage {
-			t.Errorf("Expected current package to be: %s, but got: %s.", test.expPackage, currPackage)
+			t.Errorf("Test case: %s:\nExpected current package to be: %s, but got: %s.",
+				test.descrip, test.expPackage, currPackage)
 		}
 		if !reflect.DeepEqual(test.packages, test.expected) {
-			t.Errorf("Expected: %#v but got: %#v", test.expected, test.packages)
+			t.Errorf("Test case: %s:\nExpected:\n%#v \nbut got:\n%#v",
+				test.descrip, test.expected, test.packages)
 		}
 	}
 }
