@@ -50,6 +50,10 @@ func unpackTar(tr *tar.Reader, path string, whitelist []string) error {
 		}
 		pathSandbox := filepath.Clean(path) + string(os.PathSeparator)
 		target := filepath.Clean(filepath.Join(path, header.Name))
+		if target == path {
+			// we've already created the root extraction folder, skip
+			continue
+		}
 		// Prevent Zip Slip
 		if !strings.HasPrefix(target, pathSandbox) {
 			return fmt.Errorf("Tar file tried to escape extraction root %s", target)
@@ -184,12 +188,6 @@ func unpackTar(tr *tar.Reader, path string, whitelist []string) error {
 		}
 	}
 
-	// reset all original file
-	for _, perm := range originalPerms {
-		if err := os.Chmod(perm.path, perm.perm); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
