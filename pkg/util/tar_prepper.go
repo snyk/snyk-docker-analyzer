@@ -101,3 +101,7 @@ func (p *TarPrepper) GetConfig() (ConfigSchema, error) {
 
 	return config, nil
 }
+
+func (p *TarPrepper) GetImageId() (string, error) {
+	return "", errors.New("TODO: Not implmenented")
+}

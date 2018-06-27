@@ -38,6 +38,7 @@ type Prepper interface {
 	GetConfig() (ConfigSchema, error)
 	GetFileSystem() (string, error)
 	GetImage() (Image, error)
+	GetImageId() (string, error)
 	GetSource() string
 	SetSource(string)
 }
@@ -53,6 +54,7 @@ const (
 type Image struct {
 	Source string
 	FSPath string
+	Id     string
 	Config ConfigSchema
 	Type   ImageType
 }
@@ -107,9 +109,10 @@ func getImage(p Prepper) (Image, error) {
 		p.SetSource(p.GetSource() + LatestTag)
 	}
 	output.PrintToStdErr("Retrieving image %s from source %s\n", p.GetSource(), p.Name())
-	imgPath, err := p.GetFileSystem()
+
+	id, err := p.GetImageId()
 	if err != nil {
-		return Image{}, err
+		logrus.Error("Error retrieving Image Id: ", err)
 	}
 
 	config, err := p.GetConfig()
@@ -117,10 +120,16 @@ func getImage(p Prepper) (Image, error) {
 		logrus.Error("Error retrieving History: ", err)
 	}
 
+	imgPath, err := p.GetFileSystem()
+	if err != nil {
+		return Image{}, err
+	}
+
 	logrus.Infof("Finished prepping image %s", p.GetSource())
 	return Image{
 		Source: p.GetSource(),
 		FSPath: imgPath,
+		Id:     id,
 		Config: config,
 	}, nil
 }
@@ -216,6 +225,20 @@ func getConfigFromReference(ref types.ImageReference, source string) (ConfigSche
 		return ConfigSchema{}, errors.New("Could not obtain image config")
 	}
 	return config, nil
+}
+
+func getImageIdFromReference(ref types.ImageReference, source string) (string, error) {
+	img, err := ref.NewImage(nil)
+	if err != nil {
+		logrus.Errorf("Error referencing image %s from registry: %s", source, err)
+		return "", errors.New("Could not obtain image id")
+	}
+	defer img.Close()
+
+	// TODO: for older Docker deamon versions (< 1.10?) this might not work
+	//  see https://github.com/docker/distribution/issues/1662#issuecomment-213079540
+	//  and https://windsock.io/explaining-docker-image-ids/
+	return img.ConfigInfo().Digest.String(), nil
 }
 
 func CleanupImage(image Image) {

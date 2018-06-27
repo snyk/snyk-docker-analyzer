@@ -91,3 +91,11 @@ func (p *DaemonPrepper) GetHistory() []ImageHistoryItem {
 	}
 	return historyItems
 }
+
+func (p *DaemonPrepper) GetImageId() (string, error) {
+	ref, err := daemon.ParseReference(p.Source)
+	if err != nil {
+		return "", err
+	}
+	return getImageIdFromReference(ref, p.Source)
+}
