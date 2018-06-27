@@ -65,9 +65,9 @@ func (a ApkAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageIn
 
 		// create a new scanner and read the file line by line
 		scanner := bufio.NewScanner(file)
-		var currPackage string
+		var curPkg string
 		for scanner.Scan() {
-			currPackage = a.parseLine(scanner.Text(), currPackage, packages)
+			a.parseLine(scanner.Text(), &curPkg, packages)
 		}
 	} else {
 		return packages, err
@@ -76,29 +76,61 @@ func (a ApkAnalyzer) getPackages(image pkgutil.Image) (map[string]util.PackageIn
 	return packages, nil
 }
 
-func (a ApkAnalyzer) parseLine(text string, currPackage string, packages map[string]util.PackageInfo) string {
-	line := strings.Split(text, ":")
+func (a ApkAnalyzer) parseLine(text string, curPkg *string, packages map[string]util.PackageInfo) {
+	line := strings.SplitN(text, ":", 2)
 	if len(line) == 2 {
 		key := line[0]
 		value := line[1]
+
+		getCurPkgInfo := func(name string) util.PackageInfo {
+			info, ok := packages[name]
+			if !ok {
+				info = util.PackageInfo{}
+			}
+			return info
+		}
+
 		switch key {
 		case "P":
-			return value
+			*curPkg = value
+			break
 		case "V":
-			if packages[currPackage].Version != "" {
+			if packages[*curPkg].Version != "" {
 				logrus.Warningln("Multiple versions of same package detected.  Diffing such multi-versioning not yet supported.")
-				return currPackage
 			}
-			currPackageInfo, ok := packages[currPackage]
-			if !ok {
-				currPackageInfo = util.PackageInfo{}
+			curPkgInfo := getCurPkgInfo(*curPkg)
+
+			curPkgInfo.Version = value
+			packages[*curPkg] = curPkgInfo
+			break
+		case "p":
+			curPkgInfo := getCurPkgInfo(*curPkg)
+
+			for _, elem := range strings.Split(value, " ") {
+				name := strings.Fields(elem)[0]
+				name = strings.Split(name, "=")[0]
+				curPkgInfo.Provides = append(curPkgInfo.Provides, name)
 			}
-			currPackageInfo.Version = value
-			packages[currPackage] = currPackageInfo
-			return currPackage
-		default:
-			return currPackage
+
+			packages[*curPkg] = curPkgInfo
+
+			break
+		case "D", "r":
+			curPkgInfo := getCurPkgInfo(*curPkg)
+			if curPkgInfo.Deps == nil {
+				curPkgInfo.Deps = map[string]interface{}{}
+			}
+
+			for _, dep := range strings.Split(value, " ") {
+				name := strings.Fields(dep)[0]
+				name = strings.Split(name, "=")[0]
+				if !strings.HasPrefix(name, "!") {
+					curPkgInfo.Deps[name] = nil
+				}
+			}
+
+			packages[*curPkg] = curPkgInfo
+			break
 		}
 	}
-	return currPackage
 }
