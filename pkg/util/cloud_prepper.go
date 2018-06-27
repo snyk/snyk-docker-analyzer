@@ -23,6 +23,7 @@ import (
 	"github.com/containers/image/docker"
 	"github.com/containers/image/types"
 	"github.com/docker/docker/client"
+	"github.com/pkg/errors"
 )
 
 // CloudPrepper prepares images sourced from a Cloud registry
@@ -73,4 +74,8 @@ func (p *CloudPrepper) GetConfig() (ConfigSchema, error) {
 	}
 
 	return getConfigFromReference(ref, p.Source)
+}
+
+func (p *CloudPrepper) GetImageId() (string, error) {
+	return "", errors.New("TODO: Not implmenented")
 }
