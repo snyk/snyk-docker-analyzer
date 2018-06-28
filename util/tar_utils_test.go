@@ -24,6 +24,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	pkgutil "github.com/snyk/snyk-docker-analyzer/pkg/util"
@@ -248,6 +249,42 @@ func TestSymlinks(t *testing.T) {
 		t.Errorf("Unexpected symlink destination: %s", destination)
 		remove = true
 	}
+	if remove {
+		os.RemoveAll(target)
+	}
+}
+
+func TestSymlinksCaseInsensitive(t *testing.T) {
+	remove := true
+	target := "testTars/symlink-case-sensitive"
+	starter := "testTars/symlink-case-sensitive-starter"
+	r, err := os.Open("testTars/symlink-case-sensitive.tar")
+	if err != nil {
+		t.Errorf("Error opening tar: %s", err)
+	}
+	err = CopyDir(starter, target)
+	if err != nil {
+		t.Errorf("Failed to copy starter: %s", err)
+		remove = false
+	}
+	err = pkgutil.UnTar(r, target, []string{})
+	if err != nil {
+		t.Errorf("Got unexpected error: %s", err)
+		remove = false
+	}
+	var bytes []byte
+	bytes, err = ioutil.ReadFile(filepath.Join(target, "foo/bar.txt"))
+	if err != nil {
+		t.Errorf("Failed to read sample file: %s", err)
+		remove = false
+	}
+
+	text := string(bytes)
+	if !strings.HasPrefix(text, "new") {
+		t.Errorf("Expected sample file to be replace, but saw: %s", text)
+		remove = false
+	}
+
 	if remove {
 		os.RemoveAll(target)
 	}

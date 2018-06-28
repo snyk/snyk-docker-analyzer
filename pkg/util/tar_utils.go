@@ -141,6 +141,14 @@ func unpackTar(tr *tar.Reader, path string, whitelist []string) error {
 			}
 			currFile.Close()
 		case tar.TypeSymlink:
+			resolvedLinkname := filepath.Clean(filepath.Join(filepath.Dir(target), header.Linkname))
+
+			if strings.ToLower(resolvedLinkname) == strings.ToLower(target) {
+				// case-insensitive filesystems do not enjoy symlinks that point to themselves
+				// e.g. FOO -> Foo
+				continue
+			}
+
 			var linkname string
 			if strings.HasPrefix(filepath.Clean(header.Linkname), "/") {
 				// absolute paths need to be put back in the sandbox
@@ -148,7 +156,6 @@ func unpackTar(tr *tar.Reader, path string, whitelist []string) error {
 			} else {
 				// relative paths need to be kept in tact (but validated as absolute)
 				linkname = header.Linkname
-				resolvedLinkname := filepath.Clean(filepath.Join(filepath.Dir(target), header.Linkname))
 				if !strings.HasPrefix(resolvedLinkname, pathSandbox) {
 					return fmt.Errorf("Relative symlink tried to escape extraction root %s", header.Linkname)
 				}
